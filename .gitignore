@@ -1,0 +1,5 @@
+*.pyc
+**/logs/*.log
+**/logs/*.log.*
+**/dist/
+**/node_modules/

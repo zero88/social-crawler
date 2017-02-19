@@ -1,0 +1,14 @@
+---
+#NEVER CHANGE
+encrypt:
+  algorithms: HS256
+  secret_key: cloudstaff-botley-qc
+server:
+  host: 127.0.0.1
+  port: 5000
+  database:
+    host: 127.0.0.1
+    port: 27017
+    name: athletic@v1
+    score_text_search: 0.65
+    limit_pagination: 10

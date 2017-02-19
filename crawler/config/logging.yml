@@ -1,0 +1,66 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  info_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: crawler.log
+    when: midnight
+    interval: 1
+    encoding: utf8
+
+  debug_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: crawler-debug.log
+    when: midnight
+    interval: 1
+    encoding: utf8
+
+  debug_webapp_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: crawler-webapp-debug.log
+    when: midnight
+    interval: 1
+    encoding: utf8
+
+loggers:
+  crawler:
+    level: DEBUG
+    handlers: [console, info_handler, debug_handler]
+    propagate: no
+  crawler_webapp:
+    level: DEBUG
+    handlers: [console, info_handler, debug_webapp_handler]
+    propagate: no
+  tornado.access:
+    level: INFO
+    handlers: [console, info_handler, debug_handler]
+    propagate: no
+  tornado.application:
+    level: INFO
+    handlers: [console, info_handler, debug_handler]
+    propagate: no
+  tornado.general:
+    level: INFO
+    handlers: [console, info_handler, debug_handler]
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers: [console, info_handler, debug_handler]
