@@ -3,9 +3,13 @@ import argparse
 import logging
 import logging.config
 import os
-import yaml
+from email import message_from_string
 
+import yaml
 from pkg_resources import get_distribution
+
+import server.utils.textUtils as textUtils
+from server.app import Background
 
 
 def __setup_logging__(logConfig='logging.yml', logLevel=logging.INFO):
@@ -40,7 +44,6 @@ def __setupApp__(appConfig, defaultCfg='app.yml'):
 
 def main(*v):
   __setup_logging__()
-  from email import message_from_string
   pkgInfo = (v and v[0]) or message_from_string(get_distribution(__name__).get_metadata('PKG-INFO'))
   logger = logging.getLogger(__name__)
   parser = argparse.ArgumentParser(usage=pkgInfo['Description'])
@@ -51,9 +54,11 @@ def main(*v):
   logger.info('===== Welcome Crawler :: Athletic Teacher Collector =====')
   appCfg = __setupApp__(args.config)
 
-  encryptTool = Encrypt(appCfg['encrypt'])
-  server = RESTServer(appCfg['server'], encryptTool)
-  server.start()
+  print textUtils.isEmpty('a')
+  Background().start()
+  # encryptTool = Encrypt(appCfg['encrypt'])
+  # server = RESTServer(appCfg['server'], encryptTool)
+  # server.start()
 
 
 if __name__ == "__main__":

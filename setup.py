@@ -1,6 +1,7 @@
-from setuptools import setup, find_packages
-import sys
 import os
+import sys
+
+from setuptools import find_packages, setup
 
 
 def package_files(directory):
@@ -26,8 +27,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     package_data={'crawler': package_data},
     install_requires=[
-        'pyyaml', 'pymongo', 'PyJWT', 'requests',
-        'flask', 'flask-restful', 'flask-cors', 'tornado', 'xlrd', 'XlsxWriter'
+        'pyyaml', 'pymongo', 'requests', 'xlrd', 'XlsxWriter'
     ],
     extras_require={
         'test': ['unittest_data_provider'],

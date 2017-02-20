@@ -32,5 +32,3 @@ def split(text, regex):
 
 def isEmpty(text):
   return text is None or text.strip() == ''
-
-if __name__ == '__main__':
