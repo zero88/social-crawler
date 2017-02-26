@@ -1,8 +1,7 @@
 import logging
 
-from crawler.crawler import Crawler, CrawlerAction
+from crawler.crawler import CrawlerAction
 from crawler.factory import CrawlerFactory
-from crawler.linkedin import LinkedinCrawler
 
 from db import DAO, AthleticDB
 from encrypt import Encrypt
