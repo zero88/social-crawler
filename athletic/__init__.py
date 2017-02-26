@@ -8,8 +8,8 @@ from email import message_from_string
 import yaml
 from pkg_resources import get_distribution
 
-import server.utils.textUtils as textUtils
-from server.app import Background
+from server.app import Athletic
+from server.utils import fileUtils, textUtils
 
 
 def __setup_logging__(logConfig='logging.yml', logLevel=logging.INFO):
@@ -30,7 +30,7 @@ def __setup_logging__(logConfig='logging.yml', logLevel=logging.INFO):
 
 
 def __setupApp__(appConfig, defaultCfg='app.yml'):
-  if(appConfig is None or appConfig.strip() is not defaultCfg):
+  if appConfig is None or appConfig.strip() is not defaultCfg:
     root = os.path.abspath(os.path.dirname(__file__))
     path = os.path.join(root, 'config', defaultCfg)
   else:
@@ -50,15 +50,10 @@ def main(*v):
   parser.add_argument("-c", "--config", action="store", default="", help="A configuration file (yaml)")
   parser.add_argument('-v', '--version', action='version', version=pkgInfo['Version'])
   args = parser.parse_args()
-
-  logger.info('===== Welcome Crawler :: Athletic Teacher Collector =====')
   appCfg = __setupApp__(args.config)
-
-  print textUtils.isEmpty('a')
-  Background().start()
-  # encryptTool = Encrypt(appCfg['encrypt'])
-  # server = RESTServer(appCfg['server'], encryptTool)
-  # server.start()
+  appCfg['datafile'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config')
+  logger.info('===== Welcome Crawler :: Athletic Teacher Collector =====')
+  Athletic(appCfg['datafile'], appCfg['server'], appCfg['encrypt'], appCfg['crawler']).start()
 
 
 if __name__ == "__main__":

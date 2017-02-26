@@ -16,7 +16,7 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: INFO
     formatter: simple
-    filename: crawler.log
+    filename: athletic.log
     when: midnight
     interval: 1
     encoding: utf8
@@ -25,7 +25,7 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: simple
-    filename: crawler-debug.log
+    filename: athletic-debug.log
     when: midnight
     interval: 1
     encoding: utf8
@@ -34,17 +34,17 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: simple
-    filename: crawler-webapp-debug.log
+    filename: athletic-webapp-debug.log
     when: midnight
     interval: 1
     encoding: utf8
 
 loggers:
-  crawler:
+  athletic:
     level: DEBUG
     handlers: [console, info_handler, debug_handler]
     propagate: no
-  crawler_webapp:
+  athletic_webapp:
     level: DEBUG
     handlers: [console, info_handler, debug_webapp_handler]
     propagate: no

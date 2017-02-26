@@ -1,7 +1,10 @@
 import glob
+import io
+import json
 import os
 import tempfile
 import time
+
 import yaml
 
 
@@ -27,7 +30,23 @@ def readYaml(file):
     return yaml.safe_load(f.read())
 
 
+def readJson(file, parentDir=None):
+  if parentDir:
+    file = joinPaths(parentDir, file)
+    print file
+  with open(file, 'rt') as f:
+    return json.load(f, encoding='utf-8')
+
+
 def createTempFile(filePath):
   metadata = parseFileName(filePath)
   temp = metadata.get('name') + '_' + str(long(time.time())) + metadata.get('ext')
   return os.path.join(tempfile.gettempdir(), temp)
+
+
+def writeTempFile(text, filePath):
+  tmp = createTempFile(filePath)
+  print tmp
+  with io.open(tmp, 'w', encoding='utf-8') as file:
+    file.write(text)
+  return os.path.abspath(file.name)

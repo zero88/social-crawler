@@ -1,0 +1,22 @@
+---
+#NEVER CHANGE
+encrypt:
+  algorithms: HS256
+  secret_key: startl.us-athletic
+server:
+  host: 127.0.0.1
+  port: 5000
+  database:
+    host: 127.0.0.1
+    port: 27017
+    name: athletic@v00
+    score_text_search: 0.65
+    limit_pagination: 10
+crawler:
+  interval: 30
+  auth:
+    facebook: zero-f.key.json
+    google: zero-g.key.json
+    instagram: zero-i.key.json
+    linkedin: zero-l.key.json
+    twitter: zero-t.key.json

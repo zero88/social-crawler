@@ -2,10 +2,14 @@ import re
 
 
 def extract(text, regex):
+  if isEmpty(text):
+    return ''
   return re.findall(re.compile(regex), text)
 
 
 def extractToLine(text, regex):
+  if isEmpty(text):
+    return ''
   matches = re.compile(regex).match(text)
   if matches:
     return matches.group(1)
@@ -19,10 +23,12 @@ def remove(text, regex):
   return re.sub(r'\s+', r' ', text).strip()
 
 
-def optimizeText(label):
-  key = label.lower().strip()
+def optimizeText(text, delimiter=r' '):
+  if isEmpty(text):
+    return ''
+  key = text.lower().strip()
   key = re.sub(r'[^a-z0-9 ]+', r'', key).strip()
-  key = re.sub(r'\s+', r' ', key).strip()
+  key = re.sub(r'\s+', delimiter, key).strip()
   return key
 
 
@@ -32,3 +38,9 @@ def split(text, regex):
 
 def isEmpty(text):
   return text is None or text.strip() == ''
+
+
+def encode(text):
+  if isEmpty(text):
+    return ''
+  return text.encode('utf-8')

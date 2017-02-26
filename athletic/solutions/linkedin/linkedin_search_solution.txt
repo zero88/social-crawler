@@ -1,0 +1,22 @@
+profile
+    $type: com.linkedin.voyager.identity.shared.MiniProfile
+    => firstName, lastName, occupation
+    => publicIdentifier: <publicIdentifier> => Full profile: https://www.linkedin.com/in + <publicIdentifier>
+    => picture['com.linkedin.voyager.common.MediaProcessorImage']: <pictureUrnID>
+    => objectUrn: <objectUrnID> => location via backendUrn
+=>
+    image
+        $type: com.linkedin.voyager.common.MediaProcessorImage
+        $id: <pictureUrnID>
+        => id: <idURL> => URL: "https://media.licdn.com/mpr/mpr/" + (shrink_<w>_<h>)? + <idURL>
+
+    location
+        $type: com.linkedin.voyager.search.SearchProfile
+        backendUrn: <objectUrnID>
+        => profileActions: <profileActions>
+        => industry, location
+
+    pdf
+        $type: com.linkedin.voyager.identity.profile.actions.SaveToPdf
+        $id: contains <profileActions>
+        => requestUrl
