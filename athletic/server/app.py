@@ -62,6 +62,6 @@ class Athletic():
         'pdf': {'index': 5, 'label': 'PDF profile'},
     }
     handler = ExcelWriteHandler(mapCol=mapCol)
-    data = self.dao.list('teachers', query={'specialist': 'pilates'} fields=list(mapCol))
+    data = self.dao.list('teachers', query={'specialist': 'pilates'}, fields=list(mapCol))
     handler.writeSheet(handler.addWorkSheet('Pilates'), rows=data)
     logger.info('Output file: {}'.format(handler.file))
