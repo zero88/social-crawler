@@ -8,6 +8,12 @@ import time
 import yaml
 
 
+def guardFile(fileName):
+  with open(fname, "w") as f:
+    f.close()
+  return fileName
+
+
 def parseFileName(filePath):
   parentDir, fileName = os.path.split(filePath)
   name = os.path.splitext(fileName)[0]
@@ -33,20 +39,23 @@ def readYaml(file):
 def readJson(file, parentDir=None):
   if parentDir:
     file = joinPaths(parentDir, file)
-    print file
   with open(file, 'rt') as f:
     return json.load(f, encoding='utf-8')
 
 
-def createTempFile(filePath):
-  metadata = parseFileName(filePath)
-  temp = metadata.get('name') + '_' + str(long(time.time())) + metadata.get('ext')
+def createTempFile(filePath=None, ext=None):
+  if filePath is None and ext is None:
+    return None
+  if filePath is None:
+    temp = str(long(time.time())) + ext
+  else:
+    metadata = parseFileName(filePath)
+    temp = metadata.get('name') + '_' + str(long(time.time())) + metadata.get('ext')
   return os.path.join(tempfile.gettempdir(), temp)
 
 
 def writeTempFile(text, filePath):
   tmp = createTempFile(filePath)
-  print tmp
   with io.open(tmp, 'w', encoding='utf-8') as file:
     file.write(text)
   return os.path.abspath(file.name)

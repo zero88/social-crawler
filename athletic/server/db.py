@@ -182,7 +182,7 @@ class AthleticDB():
     for path in paths:
       try:
         metadata, artifact = self.__parseMetadata_FromFile__(path)
-        data = fileUtils.readYaml(path).get('locations')
+        data = fileUtils.readJson(path, self.datafile).get('locations')
         for location in data:
           location['metadata'] = {'from': artifact}
           self.dao.insertOne('locations', location)

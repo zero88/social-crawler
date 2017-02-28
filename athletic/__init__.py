@@ -51,9 +51,9 @@ def main(*v):
   parser.add_argument('-v', '--version', action='version', version=pkgInfo['Version'])
   args = parser.parse_args()
   appCfg = __setupApp__(args.config)
-  appCfg['datafile'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config')
+  appCfg['builtinDataDir'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config')
   logger.info('===== Welcome Crawler :: Athletic Teacher Collector =====')
-  Athletic(appCfg['datafile'], appCfg['server'], appCfg['encrypt'], appCfg['crawler']).start()
+  Athletic(appCfg['builtinDataDir'], appCfg['server'], appCfg['encrypt'], appCfg['crawler']).start()
 
 
 if __name__ == "__main__":
