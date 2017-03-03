@@ -11,6 +11,14 @@ def fromJson(_json):
   return json.loads(_json)
 
 
+def restrict(_dict, ignores=[]):
+  if not _dict:
+    return None
+  if not ignores:
+    return _dict
+  return {k: v for k, v in _dict.iteritems() if k not in ignores}
+
+
 def extract(_dict, keys=[], keepIfNotExist=False):
   if not _dict:
     return None

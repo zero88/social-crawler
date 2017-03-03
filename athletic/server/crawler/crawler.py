@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from ..exception import ExistingError
-from ..utils import textUtils
+from ..utils import dictUtils, textUtils
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,12 @@ class Crawler(object):
     self.password = searchQuery.get('method').get('auth').get('password')
     self.locations = searchQuery.get('query').get('locations')
     self.keywords = searchQuery.get('query').get('keywords')
-    self.max_item = searchQuery.get('query').get('total')
+    self.counter = dictUtils.deep_copy(searchQuery.get('counter'))
 
   def search(self):
     ''' Search and collect simple profile '''
+    logger.info('== Params == l: {} - k: {} - c: {}'.format(self.locations,
+                                                            self.keywords, self.counter))
     self.search0(self.track(CrawlerAction.SEARCH))
 
   def access(self):
@@ -55,22 +57,28 @@ class Crawler(object):
     self.dao.insertOne('crawler_transactions', trackRecord)
     return str(runId)
 
-  def stopTrack(self, runId, keyword, location, page_index, url, message):
+  def stopTrack(self, runId, keyword, location, url, message):
     stopAt = {
         'keyword': keyword,
         'location': location,
-        'page_index': page_index,
+        'count': self.counter.get('count_on_keyword_location'),
+        'start_page': self.counter.get('start_page'),
+        'page_index': self.counter.get('current_page'),
         'url': url,
         'message': message
     }
     logging.info('Stopping runId: {}'.format(runId))
-    arrays = self.dao.buildArrayAppendSet({'stopAt': [stopAt]})
+    arrays = self.dao.buildSetValues({'stopAt': [stopAt]})
     self.dao.update('crawler_transactions', {'runId': runId}, arrays=arrays)
 
-  def processEntity(self, entity):
+  def completeTracking(self, runId):
+    self.dao.update('crawler_transactions', {'runId': runId}, {'total': self.counter.get('total')})
+
+  def processEntity(self, entity, action):
     if textUtils.isEmpty(entity.get('fullName')):
       entity['fullName'] = entity.get('firstName', '') + ' ' + entity.get('lastName', '')
     entity['metadata']['scrapeBy'] = self.account
+    entity['metadata']['action'] = action
     entity['metadata']['method'] = self.searchQuery.get('method').get('type')
     entity['metadata']['requestBy'] = self.searchQuery.get('requestBy')
     query = {'key': entity.get('key'), 'metadata.method': entity.get('metadata').get('method')}
@@ -79,7 +87,7 @@ class Crawler(object):
     existed = self.dao.findOne('teachers', query)
     if existed is not None:
       logging.info('Update keywords metadata for existed entity: {}'.format(query))
-      arrays = self.dao.buildArrayAppendSet({'metadata.keywords': entity.get('metadata').get('keywords')})
+      arrays = self.dao.buildSetValues({'metadata.keywords': entity.get('metadata').get('keywords')})
       self.dao.update('teachers', query, arrays=arrays)
     else:
       self.dao.insertOne('teachers', entity)

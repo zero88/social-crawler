@@ -69,5 +69,6 @@ class NoResultError(BaseError):
 class LimitedError(BaseError):
   ''' Error when exceed any limit '''
 
-  def __init__(self, message='', ex=None, level=logging.DEBUG):
+  def __init__(self, message='', ex=None, currentCount=0, level=logging.DEBUG):
     super(LimitedError, self).__init__(message, ex, level)
+    self.currentCount = currentCount

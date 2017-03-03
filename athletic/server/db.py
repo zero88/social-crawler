@@ -53,13 +53,27 @@ class DAO:
         {'$sort': {'times': sort}},
         {'$limit': limit}
     ]
-    logger.debug('Group in: {} - Pipeline: {}'.format(collection, pipeline))
+    logger.debug('Group Count in: {} - Pipeline: {}'.format(collection, pipeline))
     data = json.loads(json_util.dumps(self.db[collection].aggregate(pipeline)))
     if isFK is True:
       for item in data:
         record = self.findById(item.get('_id').get('$ref'), item.get('_id').get('$id'), fields)
         item['_id'] = json.loads(json_util.dumps(record))
     return data
+
+  def groupView(self, collection, groupBy, query={}, distinctCols=[], mixupCols=[]):
+    group = {'_id': '$' + groupBy}
+    if distinctCols == [] and mixupCols == []:
+      group[collection] = {'$push': '$$ROOT'}
+    else:
+      group = dictUtils.merge_dicts(False, group, self.buildSetGroupQuery(distinctCols))
+      group = dictUtils.merge_dicts(False, group, self.buildListGroupQuery(mixupCols))
+    pipeline = [
+        {'$match': query},
+        {'$group': group}
+    ]
+    logger.debug('Group View in: {} - Pipeline: {}'.format(collection, pipeline))
+    return json.loads(json_util.dumps(self.db[collection].aggregate(pipeline)))
 
   def findById(self, collection, _id, fields=None):
     if _id is None:
@@ -72,9 +86,7 @@ class DAO:
     projection = self.__build_projection__(fields)
     logger.debug('Find in: {} - Query: {} - Projection: {}'.format(collection, query, projection))
     instance = self.db[collection].find_one(query, projection=projection)
-    if instance is None:
-      return None
-    return json.loads(json_util.dumps(instance))
+    return json.loads(json_util.dumps(instance)) if instance else None
 
   def count(self, collection, query, references=[]):
     logger.debug('Count in: {} - Query: {}'.format(collection, query))
@@ -102,15 +114,13 @@ class DAO:
         data['metadata'] = {}
       data['metadata']['created_at'] = datetime.datetime.utcnow()
       data = self.__convertRef__(data, references)
-      logger.debug('Insert into {} - Data {}'.format(collection, data))
+      logger.debug('Insert into {} - Data: {}'.format(collection, data))
       return self.db[collection].insert_one(data)
     except Exception as e:
       raise DatabaseError(ex=e)
 
-  def update(self, collection, query, data={}, references=[], arrays={}):
+  def update(self, collection, query={}, data={}, references=[], arrays={}):
     try:
-      if query is None:
-        query = {}
       data = dictUtils.flatten(data)
       data = self.__convertRef__(data, references)
       data['metadata.modified_at'] = datetime.datetime.utcnow()
@@ -119,17 +129,28 @@ class DAO:
     except Exception as e:
       raise DatabaseError(ex=e)
 
-  def buildArrayAppendSet(self, _dict):
+  def remove(self, collection, query=None):
+    if query is None:
+      raise DatabaseError(message='Forbid removing all records')
+    logger.debug('Remove document in {} - Query: {}'.format(collection, query))
+    return self.db[collection].delete_many(query)
+
+  def buildSetGroupQuery(self, fields=[]):
+    return {field: {'$addToSet': '$' + field} for field in fields}
+
+  def buildListGroupQuery(self, fields=[]):
+    return {field: {'$push': '$' + field} for field in fields}
+
+  def buildSetValues(self, _dict):
     return dictUtils.build_dict('$addToSet', '$each', _dict)
 
-  def buildArrayAppendList(self, _dict):
+  def buildListValues(self, _dict):
     return dictUtils.build_dict('$push', '$each', _dict)
 
   def __build_projection__(self, fields=None):
-    if fields is None:
-      return dictUtils.build_dict_from_keys(['metadata'], 0)
-    else:
-      return dictUtils.build_dict_from_keys(fields, 1)
+    value = 0 if fields is None else 1
+    fields = ['metadata'] if fields is None else fields
+    return dictUtils.build_dict_from_keys(fields, value)
 
   def __convertRef__(self, data, references):
     for ref in references:

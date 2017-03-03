@@ -43,4 +43,6 @@ def isEmpty(text):
 def encode(text):
   if isEmpty(text):
     return ''
+  if type(text) is not unicode:
+    return text
   return text.encode('utf-8')
