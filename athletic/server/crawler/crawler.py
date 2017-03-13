@@ -1,4 +1,5 @@
 import logging
+import urllib
 import uuid
 
 from ..exception import ExistingError
@@ -9,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 class CrawlerAction(object):
   SEARCH, ACCESS, COMPLETE, FULL = range(4)
+
+
+class CrawlerState(object):
+  OK, ERROR, SUSPICION = range(3)
 
 
 class Crawler(object):
@@ -22,28 +27,50 @@ class Crawler(object):
     self.locations = searchQuery.get('query').get('locations')
     self.keywords = searchQuery.get('query').get('keywords')
     self.counter = dictUtils.deep_copy(searchQuery.get('counter'))
+    self.socialRegex = {
+        'facebook': r'((http|https)://)?(www\.)?facebook\.com/.+',
+        'flickr': r'((http|https)://)?(www\.)?flickr\.com/.+',
+        'github': r'((http|https)://)?(www\.)?youtube\.com/.+',
+        'gplus': r'((http|https)://)?plus\.google\.com/.+',
+        'instagram': r'((http|https)://)?(www\.)?instagram\.com/.+',
+        'linkedin': r'((http|https)://)?(www\.)?linkedin\.com/.+',
+        'pinterest': r'((http|https)://)?(www\.)?pinterest\.com/.+',
+        'twitter': r'((http|https)://)?twitter\.com/.+'
+    }
 
   def search(self):
     ''' Search and collect simple profile '''
     logger.info('== Params == l: {} - k: {} - c: {}'.format(self.locations,
                                                             self.keywords, self.counter))
-    self.search0(self.track(CrawlerAction.SEARCH))
+    runId = self.track(CrawlerAction.SEARCH)
+    self.finishTrack(runId, self.search0(runId))
 
   def access(self):
     ''' Collect intensively detail profile '''
-    self.access0(self.track(CrawlerAction.ACCESS))
+    records = self.dao.list('teachers', {
+        'metadata.method': self.searchQuery.get('method').get('type'),
+        '$or': [
+            {'metadata.action': CrawlerAction.SEARCH},
+            {
+                'metadata.action': CrawlerAction.ACCESS,
+                'state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
+            }
+        ]
+    }, limit=-1)
+    runId = self.track(CrawlerAction.ACCESS)
+    self.finishTrack(runId, self.access0(runId, records))
 
   def complete(self):
     ''' Collect profile from external resource(facebook/google) '''
-    self.access0(self.track(CrawlerAction.COMPLETE))
+    self.complete0(self.track(CrawlerAction.COMPLETE))
 
-  def search0(self):
+  def search0(self, runId):
     raise NotImplementedError("Must implement")
 
-  def access0(self):
+  def access0(self, runId, record):
     raise NotImplementedError("Must implement")
 
-  def complete0(self):
+  def complete0(self, runId):
     raise NotImplementedError("Must implement")
 
   def track(self, action):
@@ -52,42 +79,58 @@ class Crawler(object):
         'runId': runId,
         'action': action,
         'method': self.searchQuery.get('method').get('type'),
-        'requestBy': self.searchQuery.get('requestBy')
+        'requestBy': self.searchQuery.get('requestBy'),
+        'scrapeBy': self.account,
+        'total': 0,
+        'stopAt': []
     }
+    logging.info('Start track runId: {}'.format(runId))
     self.dao.insertOne('crawler_transactions', trackRecord)
-    return str(runId)
+    return runId
 
-  def stopTrack(self, runId, keyword, location, url, message):
-    stopAt = {
-        'keyword': keyword,
-        'location': location,
-        'count': self.counter.get('count_on_keyword_location'),
-        'start_page': self.counter.get('start_page'),
-        'page_index': self.counter.get('current_page'),
-        'url': url,
-        'message': message
-    }
-    logging.info('Stopping runId: {}'.format(runId))
-    arrays = self.dao.buildSetValues({'stopAt': [stopAt]})
-    self.dao.update('crawler_transactions', {'runId': runId}, arrays=arrays)
+  def finishTrack(self, runId, result):
+    logging.info('Finish track runId: {}'.format(runId))
+    self.dao.update('crawler_transactions', {'runId': runId}, data=result)
 
-  def completeTracking(self, runId):
-    self.dao.update('crawler_transactions', {'runId': runId}, {'total': self.counter.get('total')})
-
-  def processEntity(self, entity, action):
+  def processEntity(self, runId, entity, action):
     if textUtils.isEmpty(entity.get('fullName')):
       entity['fullName'] = entity.get('firstName', '') + ' ' + entity.get('lastName', '')
-    entity['metadata']['scrapeBy'] = self.account
+    if 'metadata' not in entity:
+      entity['metadata'] = {}
     entity['metadata']['action'] = action
     entity['metadata']['method'] = self.searchQuery.get('method').get('type')
-    entity['metadata']['requestBy'] = self.searchQuery.get('requestBy')
     query = {'key': entity.get('key'), 'metadata.method': entity.get('metadata').get('method')}
-    logger.info('Process entity: "{}"'.format(query))
-    logger.debug('==> Entity: "{}"'.format(entity))
+    logger.info('Process entity: {}'.format(query))
+    logger.debug('==> Entity: {}'.format(entity))
     existed = self.dao.findOne('teachers', query)
     if existed is not None:
       logging.info('Update keywords metadata for existed entity: {}'.format(query))
-      arrays = self.dao.buildSetValues({'metadata.keywords': entity.get('metadata').get('keywords')})
+      arrays = self.dao.buildSetValues({
+          'metadata.keywords': entity.get('metadata').get('keywords'),
+          'metadata.runId': [runId]
+      })
       self.dao.update('teachers', query, arrays=arrays)
     else:
+      entity['metadata']['runId'] = [runId]
       self.dao.insertOne('teachers', entity)
+
+  def updateEntity(self, runId, record, entity, action):
+    method = self.searchQuery.get('method').get('type')
+    if 'metadata' not in entity:
+      entity['metadata'] = {}
+    entity['metadata']['action'] = action
+    entity['metadata']['method'] = method
+    arrays = self.dao.buildSetValues({
+        'metadata.runId': [runId]
+    })
+    key = record.get('key')
+    logger.info('Update entity: {}@{}'.format(method, urllib.quote_plus(textUtils.encode(record.get('key')))))
+    logger.debug('==> Entity: {}'.format(entity))
+    query = {'key': key, 'metadata.method': method}
+    self.dao.update('teachers', query, data=entity, arrays=arrays)
+
+  def parseWebsite(self, url):
+    for key, regex in self.socialRegex.iteritems():
+      if textUtils.match(url, regex):
+        return {key: url}
+    return {'website': url}

@@ -93,10 +93,15 @@ class DAO:
     query = self.__convertRef__(query, references)
     return self.db[collection].find(query).count()
 
-  def list(self, collection, query={}, fields=None):
+  def list(self, collection, query={}, fields=None, limit=None):
     projection = self.__build_projection__(fields)
-    logger.debug('List in: {} - Query: {} - Fields: {}'.format(collection, query, projection))
-    return json.loads(json_util.dumps(self.db[collection].find(query, projection=projection)))
+    limit = limit or self.dbCfg.get('limit_pagination')
+    logger.debug('List in: {} - Query: {} - Fields: {} - Limit: {}'.format(collection, query, projection, limit))
+    if limit == -1:
+      data = self.db[collection].find(query, projection=projection)
+    else:
+      data = self.db[collection].find(query, projection=projection).limit(limit)
+    return json.loads(json_util.dumps(data))
 
   def insertBulk(self, collection, data):
     try:

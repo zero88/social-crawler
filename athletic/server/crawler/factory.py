@@ -1,5 +1,3 @@
-from crawler import Crawler, CrawlerAction
-
 from another import AnotherCrawler
 from facebook import FacebookCrawler
 from google import GoogleCrawler
@@ -9,6 +7,7 @@ from twitter import TwitterCrawler
 
 from ..exception import ExecutionError
 from ..utils import dictUtils
+from .crawler import Crawler, CrawlerAction
 
 
 class CrawlerFactory(object):

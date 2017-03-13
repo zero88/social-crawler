@@ -26,13 +26,13 @@ class Athletic():
   def start(self):
     self.db.initialize()
     # locations = ['us:0', 'au:0', 'gb:0', 'sg:0']
-    locations = ['us:0']
+    locations = ['gb:0']
     keywords = [
         # {'specialist': 'yoga', 'keywords': ['yoga teacher', 'yoga instructor', 'yoga master']},
         # {'specialist': 'pilates', 'keywords': ['pilates teacher', 'pilates instructor', 'pilates master']},
         # {'specialist': 'MMA', 'keywords': ['mix martial art teacher', 'mix martial art instructor']},
-        {'specialist': 'dance', 'keywords': ['dance instructor',
-                                             'ballet teacher', 'ballet instructor', 'zumba instructor']}
+        # {'specialist': 'dance', 'keywords': ['dance instructor', 'ballet teacher', 'ballet instructor', 'zumba instructor']}
+        {'specialist': 'dance', 'keywords': ['ballet teacher', 'ballet instructor', 'zumba instructor']}
     ]
     auth = self.crawlerCfg.get('auth')
     methods = {
@@ -46,11 +46,9 @@ class Athletic():
     counter = {
         'total': 0,
         'start_page': 1,
-        'expected_on_keyword_location': -1,
-        'count_on_keyword_location': 0,
+        'expected_on_keyword_location': -1
     }
     counter['limited'] = counter.get('expected_on_keyword_location') != -1
-    counter['current_page'] = counter.get('start_page')
     searchQuery = {
         'methods': dictUtils.extract(methods, ['linkedin']),
         'query': {
@@ -61,8 +59,14 @@ class Athletic():
         'requestBy': 'zero',
     }
     crawlers = CrawlerFactory.parse(self.dao, searchQuery)
-    CrawlerFactory.execute(CrawlerAction.SEARCH, crawlers)
+    CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers)
 
+    # keywords = [
+    #     {'specialist': ['ballet teacher', 'ballet instructor', 'zumba instructor']}]
+    # searchQuery['query']['keywords'] = keywords
+    # counter['start_page'] = 1
+    # crawlers = CrawlerFactory.parse(self.dao, searchQuery)
+    # CrawlerFactory.execute(CrawlerAction.SEARCH, crawlers)
     # mapCol = {
     #     'fullName': {'index': 0, 'label': 'Full Name'},
     #     'title': {'index': 1, 'label': 'Title'},
