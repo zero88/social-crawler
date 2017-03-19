@@ -64,10 +64,10 @@ class Athletic():
 
     queries = []
     for location in locations:
-      # for specialist in specialists:
-      query = dictUtils.deep_copy(searchQuery)
-      query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': specialists}}
-      queries.append(query)
+      for specialist in specialists:
+        query = dictUtils.deep_copy(searchQuery)
+        query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
+        queries.append(query)
 
     threads = []
     for query in queries:

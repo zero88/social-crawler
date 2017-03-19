@@ -89,7 +89,6 @@ class WebsiteCrawler(Crawler):
         data[social] = textUtils.search(content, 'href="mailto:' + regex, cutoff='href="mailto:')
         continue
       data[social] = textUtils.search(content, 'href="' + regex, cutoff='href="')
-    print data
     return data, errors
 
   def __parsingPhone__(self, html, regex):

@@ -96,7 +96,7 @@ class Crawler(object):
         'website': {'$exists': True, '$ne': []}
     }
     query = dictUtils.merge_dicts(True, self.searchQuery.get('query').get('additional'), query)
-    records = self.dao.list('teachers', query, fields=[], limit=1)
+    records = self.dao.list('teachers', query, fields=[], limit=-1)
     runId = self.track(CrawlerAction.COMPLETE, json.dumps(query))
     self.finishTrack(runId, func.access0(runId, records))
 
