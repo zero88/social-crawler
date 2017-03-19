@@ -3,6 +3,8 @@
 encrypt:
   algorithms: HS256
   secret_key: startl.us-athletic
+temp:
+  prefix: athletic
 server:
   host: 127.0.0.1
   port: 5000

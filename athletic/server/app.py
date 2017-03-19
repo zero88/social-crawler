@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from crawler.crawler import CrawlerAction
 from crawler.factory import CrawlerFactory
@@ -25,8 +26,8 @@ class Athletic():
 
   def start(self):
     self.db.initialize()
-    # locations = ['us:0', 'au:0', 'gb:0', 'sg:0']
-    locations = ['gb:0']
+    locations = ['au:0', 'us:0', 'gb:0', 'sg:0']
+    # locations = ['us:0', 'sg:0']
     keywords = [
         # {'specialist': 'yoga', 'keywords': ['yoga teacher', 'yoga instructor', 'yoga master']},
         # {'specialist': 'pilates', 'keywords': ['pilates teacher', 'pilates instructor', 'pilates master']},
@@ -41,7 +42,7 @@ class Athletic():
         'instagram': {'auth': fileUtils.readJson(auth.get('instagram'), self.builtinDataDir)},
         'linkedin': {'auth': fileUtils.readJson(auth.get('linkedin'), self.builtinDataDir)},
         'twitter': {'auth': fileUtils.readJson(auth.get('twitter'), self.builtinDataDir)},
-        'other': {'auth': {}}
+        'website': {'auth': {}}
     }
     counter = {
         'total': 0,
@@ -54,28 +55,40 @@ class Athletic():
         'query': {
             'locations': locations,
             'keywords': keywords,
+            'additional': {}
         },
         'counter': counter,
         'requestBy': 'zero',
     }
-    crawlers = CrawlerFactory.parse(self.dao, searchQuery)
-    CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers)
+    specialists = ['yoga', 'pilates']
 
-    # keywords = [
-    #     {'specialist': ['ballet teacher', 'ballet instructor', 'zumba instructor']}]
-    # searchQuery['query']['keywords'] = keywords
-    # counter['start_page'] = 1
-    # crawlers = CrawlerFactory.parse(self.dao, searchQuery)
-    # CrawlerFactory.execute(CrawlerAction.SEARCH, crawlers)
-    # mapCol = {
-    #     'fullName': {'index': 0, 'label': 'Full Name'},
-    #     'title': {'index': 1, 'label': 'Title'},
-    #     'address': {'index': 2, 'label': 'Address'},
-    #     'linkedin': {'index': 3, 'label': 'Linkedin account'},
-    #     'avatar': {'index': 4, 'label': 'Avatar'},
-    #     'pdf': {'index': 5, 'label': 'PDF profile'},
-    # }
-    # handler = ExcelWriteHandler(mapCol=mapCol)
-    # data = self.dao.list('teachers', query={'specialist': 'pilates'}, fields=list(mapCol))
-    # handler.writeSheet(handler.addWorkSheet('Pilates'), rows=data)
-    # logger.info('Output file: {}'.format(handler.file))
+    queries = []
+    for location in locations:
+      # for specialist in specialists:
+      query = dictUtils.deep_copy(searchQuery)
+      query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': specialists}}
+      queries.append(query)
+
+    threads = []
+    for query in queries:
+      t = threading.Thread(target=self.runCrawler, args=(query,))
+      threads.append(t)
+      t.start()
+
+  def runCrawler(self, query):
+    crawlers = CrawlerFactory.parse(self.dao, query)
+    CrawlerFactory.execute(CrawlerAction.COMPLETE, crawlers)
+
+  def __export__(self):
+    mapCol = {
+        'fullName': {'index': 0, 'label': 'Full Name'},
+        'title': {'index': 1, 'label': 'Title'},
+        'address': {'index': 2, 'label': 'Address'},
+        'linkedin': {'index': 3, 'label': 'Linkedin account'},
+        'avatar': {'index': 4, 'label': 'Avatar'},
+        'pdf': {'index': 5, 'label': 'PDF profile'},
+    }
+    handler = ExcelWriteHandler(mapCol=mapCol)
+    data = self.dao.list('teachers', query={'specialist': 'pilates'}, fields=list(mapCol))
+    handler.writeSheet(handler.addWorkSheet('Pilates'), rows=data)
+    logger.info('Output file: {}'.format(handler.file))

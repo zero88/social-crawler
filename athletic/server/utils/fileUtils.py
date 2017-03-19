@@ -14,6 +14,16 @@ def guardFile(fileName):
   return fileName
 
 
+def createDir(dir):
+  if os.path.exists(dir):
+    return
+  try:
+    os.makedirs(dir)
+  except OSError as exc:  # Guard against race condition
+    if exc.errno != errno.EEXIST:
+      raise
+
+
 def parseFileName(filePath):
   parentDir, fileName = os.path.split(filePath)
   name = os.path.splitext(fileName)[0]
@@ -51,11 +61,12 @@ def createTempFile(filePath=None, ext=None):
   else:
     metadata = parseFileName(filePath)
     temp = metadata.get('name') + '_' + str(long(time.time())) + metadata.get('ext')
-  return os.path.join(tempfile.gettempdir(), temp)
+    createDir(os.path.join(tempfile.gettempdir(), metadata.get('dir')))
+  return os.path.join(tempfile.gettempdir(), metadata.get('dir'), temp)
 
 
 def writeTempFile(text, filePath):
   tmp = createTempFile(filePath)
-  with io.open(tmp, 'w', encoding='utf-8') as file:
+  with io.open(tmp, 'w+', encoding='utf-8') as file:
     file.write(text)
   return os.path.abspath(file.name)

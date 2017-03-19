@@ -45,9 +45,31 @@ def merge_dicts(skipEmpty, *dict_args):
   result = {}
   for dictionary in dict_args:
     if skipEmpty:
-      result.update({k: v for k, v in dictionary.iteritems() if v not in [None, '']})
+      result.update({k: v for k, v in dictionary.iteritems() if v})
     else:
       result.update(dictionary)
+  return result
+
+
+def extend_dicts(*dict_args):
+  result = {}
+  for dictionary in dict_args:
+    for k, v in dictionary.iteritems():
+      if k not in result:
+        result.update({k: v})
+        continue
+      if type(v) is set or type(v) is list:
+        value = set(v)
+        value.update(result.get(k))
+        result.update({k: list(value)})
+      elif type(v) is dict:
+        a = extend_dicts(result.get(k), v)
+        print a
+        result.update({k: a})
+      else:
+        value = set([v])
+        value.update([result.get(k)])
+        result.update({k: value})
   return result
 
 

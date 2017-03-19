@@ -42,7 +42,8 @@ class LinkedinCrawler(Crawler):
         'total': 0,
         'stopAt': []
     }
-    driver = webdriver.Chrome()
+    driver = webdriver.PhantomJS(
+        executable_path='C:/Users/sontt/Projects/work/startl.us/athletic-teacher/athletic/exec/phantomjs.exe')
     try:
       self.__login__(driver)
       self.__search__(runId, driver, result)
@@ -95,18 +96,16 @@ class LinkedinCrawler(Crawler):
           data = self.__extractData__(driver, self.config.get('profile').get('ref_xpath').format(key))
           logger.debug(
               'Method: {} - Key: {} - Data: {}'.format(self.searchQuery.get('method').get('type'), key, data))
-          self.updateEntity(runId, record, self.__analyze_access__(data), CrawlerAction.ACCESS)
+          self.updateEntity(runId, record, entity=self.__analyze_access__(data), action=CrawlerAction.ACCESS)
           count += 1
         except NoResultError as nre:
           errors.append({'key': key, 'url': nre.where, 'message': nre.message})
-          self.updateEntity(runId, record, {'state': CrawlerState.ERROR}, CrawlerAction.ACCESS)
+          self.updateRecordState(runId, record, CrawlerState.ERROR, CrawlerAction.ACCESS)
         except CrawlerError as ce:
           crawlerError += 1
           errors.append({'key': key, 'url': profileURL, 'message': ce.message})
-          state = record.get('state')
-          state = CrawlerState.ERROR if CrawlerState.SUSPICION == state else CrawlerState.SUSPICION
-          self.updateEntity(runId, record, {'state': state}, CrawlerAction.ACCESS)
-          if crawlerError > 100:
+          self.updateRecordState(runId, record, action=CrawlerAction.ACCESS)
+          if crawlerError > 20:
             break
     except Exception as e:
       logger.error('Unexpected', exc_info=True)
@@ -114,10 +113,6 @@ class LinkedinCrawler(Crawler):
       driver.close()
       driver.quit()
     return {'total': total, 'count': count, 'errors': errors}
-
-  def complete0(self, runId):
-    logger.info('Start complete profile on Linkedin')
-    pass
 
   def __login__(self, driver):
     try:
@@ -150,16 +145,15 @@ class LinkedinCrawler(Crawler):
       return json.loads(dataElement.get_attribute('innerHTML'), encoding='utf-8')
     except (WebDriverException, Exception) as e:
       html = driver.page_source
-      tmp = fileUtils.writeTempFile(html, 'linkedin.html')
+      tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths(self.tempPrefix, 'linkedin.html'))
       raise CrawlerError('URL: {} - Error file: {}'.format(driver.current_url, tmp), e, logging.ERROR)
 
   def __analyze_access__(self, data):
     result = {
         'email': data.get('data').get('emailAddress'),
-        'ims': [],
-        'phones': [],
-        'websites': [],
-        'state': CrawlerState.OK
+        'im': [],
+        'phone': [],
+        'website': []
     }
     included = data.get('included')
     for item in included:
@@ -171,7 +165,7 @@ class LinkedinCrawler(Crawler):
       elif itemType == 'com.linkedin.voyager.identity.shared.TwitterHandle':
         result['twitter'] = 'https://twitter.com/' + item.get('name')
       elif itemType == 'com.linkedin.voyager.identity.profile.ProfileWebsite':
-        url = self.parseWebsite(item.get('url'))
+        url = self.detectWebsiteType(item.get('url'))
         website = url.get('website')
         if website is None:
           result = dictUtils.merge_dicts(False, result, url)
@@ -215,6 +209,7 @@ class LinkedinCrawler(Crawler):
           errors.append(ce)
           if len(errors) > 5:
             stop['message'] = ' - '.join(str(e.message) for e in errors)
+            stop['url'] = nre.where
             break
         finally:
           logger.info('Parsed {} profile(s) on l:{} - k:{} - p:{}'.format(stop.get('count'),

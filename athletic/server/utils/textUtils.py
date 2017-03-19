@@ -2,20 +2,23 @@ import re
 
 
 def match(text, regex):
-  return isEmpty(text) is False and re.compile(regex).match(text) is not None
+  return not isEmpty(text) and re.compile(regex).match(text)
+
+
+def search(text, regex, cutoff=''):
+  if isEmpty(text):
+    return ''
+  search = re.finditer(re.compile(regex, flags=re.I), text)
+  return list(set([remove(match.group(), cutoff) for match in search])) if search else ''
 
 
 def extract(text, regex):
-  return re.findall(re.compile(regex), text) if isEmpty(text) is False else ''
+  return re.findall(re.compile(regex), text) if not isEmpty(text) else ''
 
 
 def extractToLine(text, regex):
-  if isEmpty(text):
-    return ''
-  matches = re.compile(regex).match(text)
-  if matches:
-    return matches.group(1)
-  return None
+  matches = match(text, regex)
+  return matches.group() if matches else ''
 
 
 def remove(text, regex):

@@ -54,16 +54,16 @@ class ExecutionError(BaseError):
 class CrawlerError(BaseError):
   ''' Error when crawling '''
 
-  def __init__(self, message='', ex=None, level=logging.DEBUG):
-    super(CrawlerError, self).__init__(message, ex, level)
+  def __init__(self, message='', ex=None, where=None, level=logging.DEBUG):
+    super(CrawlerError, self).__init__(message or '' + ('::' + where if where else ''), ex, level)
+    self.where = where
 
 
-class NoResultError(BaseError):
-  ''' Error when not finding anything '''
+class NoResultError(CrawlerError):
+  ''' Error when crawling but not find anything '''
 
   def __init__(self, message='', ex=None, where=None, level=logging.DEBUG):
-    super(NoResultError, self).__init__(message, ex, level)
-    self.where = where
+    super(NoResultError, self).__init__(message, ex, where, level)
 
 
 class LimitedError(BaseError):
