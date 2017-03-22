@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# encoding=utf8
 import re
 
 
@@ -57,7 +59,3 @@ def decode(text):
   if type(text) is unicode:
     return text
   return text.decode('utf-8')
-
-
-if __name__ == '__main__':
-  text = ''

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# encoding=utf8
 import json
 import logging
 import urllib
@@ -44,7 +46,7 @@ class Crawler(object):
         'twitter': r'(https?://)?twitter\.com\/(?:(#!\/)?(?:[\w\-\.]+\/)*([\w\-\.]+))',
         'youtube': r'(https?://)?(www\.)?youtube\.com/(channel\/|user\/)?[a-zA-Z0-9\-]+',
         'phone': {
-            'prefix': r'(telephone|phone|mobile|tel|call)(\s?:|\s?-)?(?i)',
+            'prefix': r'(telephone|phone|mobile|tel|call|call us)(\s?:|\s?-)?(?i)',
             'regex': r'^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\s\\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$(?i)'
         }
     }
@@ -86,14 +88,15 @@ class Crawler(object):
     ''' Collect profile from external resource(facebook/google) '''
     query = {
         'metadata.method': self.searchQuery.get('method').get('type'),
-        '$or': [
-            {'metadata.action': CrawlerAction.ACCESS},
-            {
-                'metadata.action': CrawlerAction.COMPLETE,
-                'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
-            }
-        ],
-        'website': {'$exists': True, '$ne': []}
+        'website': {'$exists': True, '$ne': []},
+        'metadata.action': CrawlerAction.ACCESS,
+        # '$or': [
+        #     {},
+        #     {
+        #         'metadata.action': CrawlerAction.COMPLETE,
+        #         'metadata.state': {'$nin': [CrawlerState.OK], '$exists': True}
+        #     }
+        # ]
     }
     query = dictUtils.merge_dicts(True, self.searchQuery.get('query').get('additional'), query)
     records = self.dao.list('teachers', query, fields=[], limit=-1)

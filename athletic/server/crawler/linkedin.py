@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# encoding=utf8
 import json
 import logging
 import re
@@ -86,16 +88,16 @@ class LinkedinCrawler(Crawler):
       self.__login__(driver)
       for record in records:
         total += 1
-        key = urllib.quote_plus(textUtils.encode(record.get('key')))
+        key = urllib.quote_plus(record.get('key'))
         profileURL = textUtils.encode(record.get('linkedin'))
-        logger.info('Crawling {} - URL: {}'.format('linkedin@' + key, profileURL))
+        logger.info(u'Crawling linkedin@{} - URL: {}'.format(key, profileURL))
         driver.get(profileURL)
         driver.implicitly_wait(self.interval)
         try:
           self.__ensurePageHasResult__(driver, self.config.get('profile').get('unavailable'))
           data = self.__extractData__(driver, self.config.get('profile').get('ref_xpath').format(key))
           logger.debug(
-              'Method: {} - Key: {} - Data: {}'.format(self.searchQuery.get('method').get('type'), key, data))
+              u'Method: {} - Key: {} - Data: {}'.format(self.searchQuery.get('method').get('type'), key, data))
           self.updateEntity(runId, record, entity=self.__analyze_access__(data), action=CrawlerAction.ACCESS)
           count += 1
         except NoResultError as nre:
@@ -236,18 +238,18 @@ class LinkedinCrawler(Crawler):
     for profile in miniProfiles:
       if limited >= 0 and countPerPage >= limited:
         raise LimitedError('Searching limited: {}'.format(limited), currentCount=countPerPage)
-      key = textUtils.encode(profile.get('publicIdentifier'))
-      logger.info('Parsing data of profile: {}'.format(key))
+      key = profile.get('publicIdentifier')
+      logger.info(u'Parsing data of profile: {}'.format(key))
       if textUtils.isEmpty(key) or key.upper() == 'UNKNOWN':
         continue
       entity = {}
-      entity['key'] = textUtils.encode(key)
+      entity['key'] = textUtils.decode(key)
       entity['metadata'] = {'keywords': [keyword]}
-      entity['firstName'] = textUtils.encode(profile.get('firstName'))
-      entity['lastName'] = textUtils.encode(profile.get('lastName'))
+      entity['firstName'] = textUtils.decode(profile.get('firstName'))
+      entity['lastName'] = textUtils.decode(profile.get('lastName'))
       entity['specialist'] = specialist
       entity['location'] = location
-      entity['title'] = textUtils.encode(profile.get('occupation'))
+      entity['title'] = textUtils.decode(profile.get('occupation'))
       entity['linkedin'] = self.config.get('profile').format(key)
       entity['avatar'] = self.__analyze_avatar__(people, profile) or ''
       search = self.__analyze_search__(people, profile)

@@ -1,6 +1,9 @@
+#!/usr/bin/python
+# encoding=utf8
 import logging
 
 from lxml import etree
+from lxml.etree import ParseError
 
 from ..exception import CrawlerError, NoResultError
 from ..utils import dictUtils, fileUtils, textUtils
@@ -32,13 +35,13 @@ class WebsiteCrawler(Crawler):
         key = record.get('key')
         method = record.get('metadata').get('method')
         websites = record.get('website')
-        logger.info('Crawling {}'.format(method + '@' + textUtils.encode(key)))
+        logger.info(u'Crawling {}@{}'.format(method, key))
         if not websites:
           continue
         result = {}
         for website in websites:
           try:
-            logger.info('Crawling data - website::{}'.format(website))
+            logger.info(u'Crawling data - website::{}'.format(website))
             websiteResult, websiteErrors = self.__analyze_website__(runId, key, website)
             result = dictUtils.extend_dicts(result, websiteResult)
             errors.extend(websiteErrors)
@@ -69,14 +72,14 @@ class WebsiteCrawler(Crawler):
     return data, errors
 
   def __analyze_page__(self, runId, key, url):
-    logger.info('Crawling data - url::{}'.format(url))
+    logger.info(u'Crawling data - url::{}'.format(url))
     data = {}
     errors = []
     code, content = self.connectURL(url)
     if not code:
       raise NoResultError(content.get('info').get('text'), where=content.get('info').get('url'))
     trackFile = fileUtils.joinPaths(self.tempPrefix, runId, textUtils.optimizeText(url, '_') + '.html')
-    logger.debug('Crawling data - Key::{} - File::{}'.format(key, trackFile))
+    logger.debug(u'Crawling data - Key::{} - File::{}'.format(key, trackFile))
     fileUtils.writeTempFile(content, trackFile)
     for social, regex in self.socialRegex.items():
       if social == 'phone':
@@ -96,17 +99,20 @@ class WebsiteCrawler(Crawler):
     prefixRegex = regex.get('prefix')
     regexpNS = "http://exslt.org/regular-expressions"
     regexFind = etree.XPath("//*[text()[re:test(., '" + prefixRegex + "')]]", namespaces={'re': regexpNS})
-    tree = etree.HTML(html)
-    phones = set()
-    hasData = False
-    for element in regexFind(tree):
-      hasData = True
-      inside = textUtils.remove(element.text, prefixRegex).strip()
-      phones.add(textUtils.extractToLine(inside, phoneRegex))
-      phones.update([textUtils.extractToLine(item.strip(), phoneRegex)
-                     for item in element.xpath("../text()") if textUtils.match(item.strip(), phoneRegex)])
-      phones.update([textUtils.extractToLine(item.strip(), phoneRegex)
-                     for item in element.xpath("./*/text()") if textUtils.match(item.strip(), phoneRegex)])
-    if hasData and not phones:
-      raise CrawlerError('Cannot parse phone although having prefix')
-    return [phone for phone in phones if not textUtils.isEmpty(phone)]
+    try:
+      tree = etree.HTML(html)
+      phones = set()
+      hasData = False
+      for element in regexFind(tree):
+        hasData = True
+        inside = textUtils.remove(element.text, prefixRegex).strip()
+        phones.add(textUtils.extractToLine(inside, phoneRegex))
+        phones.update([textUtils.extractToLine(item.strip(), phoneRegex)
+                       for item in element.xpath("../text()") if textUtils.match(item.strip(), phoneRegex)])
+        phones.update([textUtils.extractToLine(item.strip(), phoneRegex)
+                       for item in element.xpath("./*/text()") if textUtils.match(item.strip(), phoneRegex)])
+      if hasData and not phones:
+        raise CrawlerError('Cannot parse phone although having prefix')
+      return [phone for phone in phones if not textUtils.isEmpty(phone)]
+    except ParseError as e:
+      raise CrawlerError('Error when parsing html file')

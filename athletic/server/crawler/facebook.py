@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# encoding=utf8
 import json
 import logging
 import urllib
