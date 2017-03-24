@@ -68,5 +68,5 @@ def createTempFile(filePath=None, ext=None):
 def writeTempFile(text, filePath):
   tmp = createTempFile(filePath)
   with io.open(tmp, 'w+', encoding='utf-8') as file:
-    file.write(text)
+    file.write(text.decode('utf-8'))
   return os.path.abspath(file.name)

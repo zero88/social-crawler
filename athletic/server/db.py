@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+import codecs
 import datetime
 import json
 import logging
@@ -8,10 +10,8 @@ from bson.dbref import DBRef
 from bson.objectid import ObjectId
 from pymongo import ASCENDING, DESCENDING, TEXT, IndexModel, MongoClient
 
-import utils.dictUtils as dictUtils
-import utils.fileUtils as fileUtils
-import utils.textUtils as textUtils
 from exception import BaseError, DatabaseError, ValidationError
+from utils import dictUtils, fileUtils, textUtils
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +180,34 @@ class AthleticDB():
     self.__migrate__()
     self.__createIndex__()
     self.__initLocations__()
+    self.__recover__()
 
   def __migrate__(self):
     pass
+
+  def __recover__(self):
+    pass
+    # paths = self.__getDataFiles__('data', 'log')
+    # # lines = []
+    # for path in paths:
+    #   try:
+    #     metadata, artifact = self.__parseMetadata_FromFile__(path)
+    #     count, total = 0, 0
+    #     with open(path) as f:
+    #       for line in f:
+    #         total += 1
+    #         if textUtils.isEmpty(line):
+    #           continue
+    #         try:
+    #           self.dao.insertOne('teachers', json.loads(u'{}'.format(line.replace('\\', '\\\\')), encoding="utf-8"))
+    #           count += 1
+    #         except ValueError as e:
+    #           logger.exception('Failure::Line {}'.format(total))
+    #         except DatabaseError as dbe:
+    #           logger.exception('Failure::Line {}'.format(total))
+    #     logger.info('Insert into \'teachers\' {} row(s) - Failure: {} row(s) from {}'.format(count, total - count, metadata))
+    #   except BaseError as e:
+    #     logger.error(e)
 
   def __createIndex__(self):
     teacherUniqueIndex = IndexModel([('key', ASCENDING), ('metadata.method', ASCENDING)],

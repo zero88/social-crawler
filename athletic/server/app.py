@@ -60,22 +60,25 @@ class Athletic():
         'counter': counter,
         'requestBy': 'zero',
     }
-    specialists = ['yoga', 'pilates']
 
+    # __crawling__(searchQuery)
+    # __export__()
+
+  def __crawling__(self, searchQuery):
+    specialists = ['yoga', 'pilates']
     queries = []
-    for location in locations:
+    for location in searchQuery.get('query').get('locations'):
       for specialist in specialists:
         query = dictUtils.deep_copy(searchQuery)
         query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
         queries.append(query)
-
     threads = []
     for query in queries:
-      t = threading.Thread(target=self.runCrawler, args=(query,))
+      t = threading.Thread(target=self.__runCrawler__, args=(query,))
       threads.append(t)
       t.start()
 
-  def runCrawler(self, query):
+  def __runCrawler__(self, query):
     crawlers = CrawlerFactory.parse(self.dao, query)
     CrawlerFactory.execute(CrawlerAction.COMPLETE, crawlers)
 

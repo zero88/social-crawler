@@ -8,7 +8,7 @@ def toJson(_dict):
 
 
 def fromJson(_json):
-  return json.loads(_json)
+  return json.loads(_json, encoding="utf-8")
 
 
 def restrict(_dict, ignores=[]):
