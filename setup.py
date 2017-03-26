@@ -27,7 +27,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     package_data={'athletic': package_data},
     install_requires=[
-        'pyyaml==3.12', 'pypiwin32', 'pyjwt==1.4.2', 'pymongo==3.4.0', 'requests==2.13.0',
+        'apscheduler==3.3.1', 'pyyaml==3.12', 'pypiwin32', 'pyjwt==1.4.2', 'pymongo==3.4.0', 'requests==2.13.0',
         'flask==0.12', 'flask-restful==0.2.12', 'flask-cors==3.0.2', 'tornado==4.4.2',
         'scrapy==1.2.2', 'splash==2.3.2', 'Twisted==16.6.0', 'selenium==3.3.1', 'lxml==3.4.2',
         'xlrd==1.0.0', 'XlsxWriter==0.9.6'

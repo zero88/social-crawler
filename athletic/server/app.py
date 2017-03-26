@@ -1,7 +1,10 @@
 import logging
 import threading
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
 from crawler.crawler import CrawlerAction
+from crawler.crawlerQuery import QueryBuilder
 from crawler.factory import CrawlerFactory
 
 from db import DAO, AthleticDB
@@ -18,60 +21,53 @@ class Athletic():
 
   def __init__(self, builtinDataDir, serverCfg, encryptCfg, crawlerCfg):
     self.encryptTool = Encrypt(encryptCfg)
-    self.crawlerCfg = crawlerCfg
-    self.builtinDataDir = builtinDataDir
     self.dao = DAO(serverCfg.get('database'))
-    self.db = AthleticDB(self.dao, self.builtinDataDir)
+    self.db = AthleticDB(self.dao, builtinDataDir)
+    self.crawlerQueryBuilder = self.__initialize_crawler__(builtinDataDir, crawlerCfg)
+    self.worker = BlockingScheduler()
     # self.server = RESTServer(serverCfg.get('port'), self.dao, self.encryptTool)
+
+  def __initialize_crawler__(self, builtinDataDir, crawlerCfg):
+    auth = crawlerCfg.get('auth')
+    builtinMethods = {
+        'facebook': {'auth': fileUtils.readJson(auth.get('facebook'), builtinDataDir)},
+        'google': {'auth': fileUtils.readJson(auth.get('google'), builtinDataDir)},
+        'instagram': {'auth': fileUtils.readJson(auth.get('instagram'), builtinDataDir)},
+        'linkedin': {'auth': fileUtils.readJson(auth.get('linkedin'), builtinDataDir)},
+        'twitter': {'auth': fileUtils.readJson(auth.get('twitter'), builtinDataDir)},
+        'website': {'auth': []}
+    }
+    return QueryBuilder(methods=builtinMethods)
 
   def start(self):
     self.db.initialize()
-    locations = ['au:0', 'us:0', 'gb:0', 'sg:0']
-    # locations = ['us:0', 'sg:0']
-    keywords = [
-        # {'specialist': 'yoga', 'keywords': ['yoga teacher', 'yoga instructor', 'yoga master']},
-        # {'specialist': 'pilates', 'keywords': ['pilates teacher', 'pilates instructor', 'pilates master']},
-        # {'specialist': 'MMA', 'keywords': ['mix martial art teacher', 'mix martial art instructor']},
-        # {'specialist': 'dance', 'keywords': ['dance instructor', 'ballet teacher', 'ballet instructor', 'zumba instructor']}
-        {'specialist': 'dance', 'keywords': ['ballet teacher', 'ballet instructor', 'zumba instructor']}
-    ]
-    auth = self.crawlerCfg.get('auth')
-    methods = {
-        'facebook': {'auth': fileUtils.readJson(auth.get('facebook'), self.builtinDataDir)},
-        'google': {'auth': fileUtils.readJson(auth.get('google'), self.builtinDataDir)},
-        'instagram': {'auth': fileUtils.readJson(auth.get('instagram'), self.builtinDataDir)},
-        'linkedin': {'auth': fileUtils.readJson(auth.get('linkedin'), self.builtinDataDir)},
-        'twitter': {'auth': fileUtils.readJson(auth.get('twitter'), self.builtinDataDir)},
-        'website': {'auth': {}}
-    }
-    counter = {
-        'total': 0,
-        'start_page': 1,
-        'expected_on_keyword_location': -1
-    }
-    counter['limited'] = counter.get('expected_on_keyword_location') != -1
-    searchQuery = {
-        'methods': dictUtils.extract(methods, ['linkedin']),
-        'query': {
-            'locations': locations,
-            'keywords': keywords,
-            'additional': {}
-        },
-        'counter': counter,
-        'requestBy': 'zero',
-    }
+    self.__add_job(self.__access__, name='ACCESS', interval=10)
+    # self.__add_job(self.__complete__, name='COMPLETE')
+    self.worker.start()
+    # self.__complete__()
+    # self.__export__()
 
-    # __crawling__(searchQuery)
-    # __export__()
+  def __add_job(self, func, name='ACCESS', interval=1):
+    jobId = 'jobID::' + name
+    self.worker.add_job(func, id=jobId, trigger='interval', seconds=interval, max_instances=1)
 
-  def __crawling__(self, searchQuery):
+  def __access__(self):
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'],
+                                             filterLocations=['us:0'], filterSpecs=['dance'])
+    print queries[0:1]
+    crawlers = CrawlerFactory.parse(self.dao, queries)
+    CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers[0:1])
+
+  def __complete__(self):
+    queries = self.crawlerQueryBuilder.build(['linkedin'], requestBy='zero')
     specialists = ['yoga', 'pilates']
-    queries = []
-    for location in searchQuery.get('query').get('locations'):
-      for specialist in specialists:
-        query = dictUtils.deep_copy(searchQuery)
-        query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
-        queries.append(query)
+    q = []
+    for query in queries:
+      for location in searchQuery.get('query').get('locations'):
+        for specialist in specialists:
+          query = dictUtils.deep_copy(searchQuery)
+          query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
+          queries.append(query)
     threads = []
     for query in queries:
       t = threading.Thread(target=self.__runCrawler__, args=(query,))

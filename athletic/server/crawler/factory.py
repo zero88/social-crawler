@@ -13,12 +13,10 @@ from .crawler import Crawler, CrawlerAction
 class CrawlerFactory(object):
 
   @staticmethod
-  def parse(dao, searchQuery):
+  def parse(dao, queries):
     crawlers = []
-    for method, value in searchQuery.get('methods').iteritems():
-      query = dictUtils.deep_copy(searchQuery)
-      query['method'] = value
-      query['method']['type'] = method
+    for query in queries:
+      method = query.get('method').get('type')
       if method == 'facebook':
         crawlers.append(FacebookCrawler(dao, query))
       elif method == 'google':

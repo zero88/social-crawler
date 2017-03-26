@@ -4,6 +4,7 @@ import json
 import logging
 import urllib
 import uuid
+from selenium import webdriver
 
 import requests
 
@@ -11,6 +12,31 @@ from ..exception import ExistingError
 from ..utils import dictUtils, fileUtils, textUtils
 
 logger = logging.getLogger(__name__)
+
+
+class CrawlerBrowser(object):
+  CHROME, FIREFOX, IE, EDGE = range(4)
+
+  @staticmethod
+  def get_useragent(browser):
+    if browser == CrawlerBrowser.CHROME:
+      return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.110 Safari/537.36'
+    if browser == CrawlerBrowser.IE:
+      return 'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; Touch; rv:11.0) like Gecko'
+    if browser == CrawlerBrowser.EDGE:
+      return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/14.14393'
+    return 'Mozilla/5.0 (Windows NT x.y; Win64; x64; rv:10.0) Gecko/20100101 Firefox/10.0'
+
+  @staticmethod
+  def get_driver(browser):
+    execPath = 'C:/Users/sontt/Projects/work/startl.us/athletic-teacher/athletic/exec/'
+    if browser == CrawlerBrowser.CHROME:
+      return webdriver.Chrome(executable_path=fileUtils.joinPaths(execPath, 'chromedriver.exe'))
+    if browser == CrawlerBrowser.IE:
+      return webdriver.Ie(executable_path=fileUtils.joinPaths(execPath, 'IEDriverServer.exe'))
+    if browser == CrawlerBrowser.EDGE:
+      return webdriver.Edge(executable_path=fileUtils.joinPaths(execPath, 'MicrosoftWebDriver.exe'))
+    return webdriver.Firefox(executable_path=fileUtils.joinPaths(execPath, 'geckodriver.exe'))
 
 
 class CrawlerAction(object):
@@ -67,22 +93,25 @@ class Crawler(object):
     logger.info('== Params == l: {} - k: {} - c: {}'.format(self.locations,
                                                             self.keywords, self.counter))
     runId = self.track(CrawlerAction.SEARCH)
-    self.finishTrack(runId, self.search0(runId))
+    self.finish(runId, self.search0(runId))
 
   def access(self):
     ''' Collect intensively detail profile '''
     records = self.dao.list('teachers', {
         'metadata.method': self.searchQuery.get('method').get('type'),
-        '$or': [
-            {'metadata.action': CrawlerAction.SEARCH},
-            {
-                'metadata.action': CrawlerAction.ACCESS,
-                'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
-            }
-        ]
-    }, limit=-1)
+        'location': {'$in': self.searchQuery.get('query').get('locations')},
+        'specialist': {'$in': [k.get('specialist') for k in self.searchQuery.get('query').get('keywords')]},
+        'metadata.action': CrawlerAction.SEARCH
+        # '$or': [
+        #     {'metadata.action': CrawlerAction.SEARCH},
+        #     {
+        #         'metadata.action': CrawlerAction.ACCESS,
+        #         'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
+        #     }
+        # ]
+    }, limit=2)
     runId = self.track(CrawlerAction.ACCESS)
-    self.finishTrack(runId, self.access0(runId, records))
+    self.access0(runId, records)
 
   def complete(self, func):
     ''' Collect profile from external resource(facebook/google) '''
@@ -101,7 +130,7 @@ class Crawler(object):
     query = dictUtils.merge_dicts(True, self.searchQuery.get('query').get('additional'), query)
     records = self.dao.list('teachers', query, fields=[], limit=-1)
     runId = self.track(CrawlerAction.COMPLETE, json.dumps(query))
-    self.finishTrack(runId, func.access0(runId, records))
+    self.finish(runId, func.access0(runId, records))
 
   def search0(self, runId):
     raise NotImplementedError("Must implement")
@@ -127,7 +156,7 @@ class Crawler(object):
     self.dao.insertOne('crawler_transactions', trackRecord)
     return runId
 
-  def finishTrack(self, runId, result):
+  def finish(self, runId, result):
     logging.info('Finish track runId: {}'.format(runId))
     self.dao.update('crawler_transactions', {'runId': runId}, data=result)
 

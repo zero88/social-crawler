@@ -10,10 +10,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import requests
 from lxml import etree
+from scrapy.crawler import CrawlerProcess
+
+from spiderman import Spiderman
 
 from ..exception import CrawlerError, LimitedError, NoResultError
 from ..utils import dictUtils, fileUtils, textUtils
-from .crawler import Crawler, CrawlerAction, CrawlerState
+from .crawler import Crawler, CrawlerAction, CrawlerBrowser, CrawlerState
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +28,15 @@ class LinkedinCrawler(Crawler):
     self.wait_page_load = 5
     self.config = {
         'url': 'https://www.linkedin.com',
+        'login': {
+            'url': 'https://www.linkedin.com/uas/login?fromSignIn=true&trk=uno-reg-join-sign-in',
+            'formName': 'login',
+            'submitName': 'signin',
+            'successItem': 'com.linkedin.voyager.identity.shared.MiniProfile'
+        },
         'profile': {
             'unavailable': '.profile-unavailable',
-            'ref_xpath': './/code[contains(., \'/voyager/api/identity/profiles/{}/profileContactInfo\')]',
+            'ref_xpath': './/code[contains(., "/profileContactInfo")]/text()',
             'url': 'https://www.linkedin.com/in/{}'
         },
         'search': {
@@ -37,6 +46,7 @@ class LinkedinCrawler(Crawler):
         },
         'image': 'https://media.licdn.com/mpr/mpr{}'
     }
+    self.config['auth'] = {'session_key': self.account, 'session_password': self.password}
 
   def search0(self, runId):
     logger.info('Start searching on Linkedin')
@@ -56,65 +66,27 @@ class LinkedinCrawler(Crawler):
       driver.quit()
     return result
 
-  # def access0(self, runId, record):
-  #   logger.info('Start access profile on Linkedin')
-  #   loginResponse = requests.request('POST', 'https://www.linkedin.com/uas/login-submit')
-  #   print loginResponse.cookies
-  #   print fileUtils.writeTempFile(text=loginResponse.cookies, filePath='cookies-tts.html')
-  #   headers = {
-  #       # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-  #       'User-Agent': 'Requests',
-  #       # 'cache-control': 'no-cache',
-  #       # 'postman-token': '65c70f41-0816-a021-a287-1a1a4bfe0462'
-  #   }
-  #   response = requests.request("GET", record.get('linkedin'), headers=headers,
-  #                               allow_redirects=True)
-  #   print response
-  #   print response.headers
-  #   # print fileUtils.writeTempFile(text=response.headers, filePath='headers-tts.html')
-  #   print '=========================='
-  #   print fileUtils.writeTempFile(text=response.text, filePath='content-tts.html')
-  #   content = etree.fromstring(response.text)
-  #   print '=========================='
-  #   print content
-
   def access0(self, runId, records):
     logger.info('Start accessing on Linkedin')
-    total, count, crawlerError, errors = 0, 0, 0, []
-    if not records:
-      return {'total': total, 'count': count, 'errors': errors}
-    driver = webdriver.Chrome()
-    try:
-      self.__login__(driver)
-      for record in records:
-        total += 1
-        key = urllib.quote_plus(record.get('key'))
-        profileURL = textUtils.encode(record.get('linkedin'))
-        logger.info(u'Crawling linkedin@{} - URL: {}'.format(key, profileURL))
-        driver.get(profileURL)
-        driver.implicitly_wait(self.interval)
-        try:
-          self.__ensurePageHasResult__(driver, self.config.get('profile').get('unavailable'))
-          data = self.__extractData__(driver, self.config.get('profile').get('ref_xpath').format(key))
-          logger.debug(
-              u'Method: {} - Key: {} - Data: {}'.format(self.searchQuery.get('method').get('type'), key, data))
-          self.updateEntity(runId, record, entity=self.__analyze_access__(data), action=CrawlerAction.ACCESS)
-          count += 1
-        except NoResultError as nre:
-          errors.append({'key': key, 'url': nre.where, 'message': nre.message})
-          self.updateRecordState(runId, record, CrawlerState.ERROR, CrawlerAction.ACCESS)
-        except CrawlerError as ce:
-          crawlerError += 1
-          errors.append({'key': key, 'url': profileURL, 'message': ce.message})
-          self.updateRecordState(runId, record, action=CrawlerAction.ACCESS)
-          if crawlerError > 20:
-            break
-    except Exception as e:
-      logger.error('Unexpected', exc_info=True)
-    finally:
-      driver.close()
-      driver.quit()
-    return {'total': total, 'count': count, 'errors': errors}
+    # print CrawlerBrowser.get_useragent(CrawlerBrowser.CHROME)
+    # print CrawlerBrowser.get_driver(CrawlerBrowser.CHROME)
+    process = CrawlerProcess({
+        'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.FIREFOX),
+        'DOWNLOAD_DELAY': 1
+    })
+    process.crawl(Spiderman, runId=runId, pipeline=self, items=records, siteCfg=self.config)
+    process.start()
+
+  def analyzeData(self, runId, item, response):
+    data = self.__extractData__(response, self.config.get('profile').get('ref_xpath'))
+    logger.debug(u'Method: {} - Key: {} - Data: {}'.format('access', item.get('key'), data))
+    entity = self.__analyze_access__(data)
+    logger.info(fileUtils.writeTempFile(response.body, filePath=fileUtils.joinPaths('athletic', 'linkedin',
+                                                                                    'access', 'profile.html')))
+    self.updateEntity(runId, item, entity=entity, action=CrawlerAction.ACCESS)
+
+  def notifyError(self, runId, item, response):
+    self.updateRecordState(runId, item, CrawlerState.ERROR, CrawlerAction.ACCESS)
 
   def __login__(self, driver):
     try:
@@ -138,17 +110,31 @@ class LinkedinCrawler(Crawler):
     except WebDriverException as e:
       logger.debug(str(e))
 
-  def __extractData__(self, driver, xpath):
+  def __extractData__(self, response, xpath):
     try:
       logger.debug('Parsing XPath {}'.format(xpath))
-      refElement = driver.find_element_by_xpath(xpath)
-      refData = json.loads(refElement.get_attribute('innerHTML'), encoding='utf-8')
-      dataElement = driver.find_element_by_id(refData.get('body'))
-      return json.loads(dataElement.get_attribute('innerHTML'), encoding='utf-8')
-    except (WebDriverException, Exception) as e:
-      html = driver.page_source
-      tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths(self.tempPrefix, 'linkedin.html'))
-      raise CrawlerError('URL: {} - Error file: {}'.format(driver.current_url, tmp), e, logging.ERROR)
+      # selector = Selector(response=response)
+      refElement = response.selector.xpath(xpath).extract_first()
+      print refElement
+      if refElement is None:
+        raise CrawlerError('Not found {}'.format(xpath))
+      refData = json.loads(textUtils.encode(refElement), encoding='utf-8')
+      data = response.selector.xpath('//*[@id=$val]/text()', val=refData.get('body')).extract_first()
+      return json.loads(textUtils.encode(data), encoding='utf-8')
+    except Exception as e:
+      html = response.body
+      tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths('athletic', 'linkedin', 'access', 'error-profile.html'))
+      raise CrawlerError('URL: {} - Error file: {}'.format(response.url, tmp), e, logging.ERROR)
+    # try:
+    #   logger.debug('Parsing XPath {}'.format(xpath))
+    #   refElement = driver.find_element_by_xpath(xpath)
+    #   refData = json.loads(refElement.get_attribute('innerHTML'), encoding='utf-8')
+    #   dataElement = driver.find_element_by_id(refData.get('body'))
+    #   return json.loads(dataElement.get_attribute('innerHTML'), encoding='utf-8')
+    # except (WebDriverException, Exception) as e:
+    #   html = driver.page_source
+    #   tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths(self.tempPrefix, 'linkedin.html'))
+    #   raise CrawlerError('URL: {} - Error file: {}'.format(driver.current_url, tmp), e, logging.ERROR)
 
   def __analyze_access__(self, data):
     result = {
@@ -172,7 +158,7 @@ class LinkedinCrawler(Crawler):
         if website is None:
           result = dictUtils.merge_dicts(False, result, url)
         else:
-          result.get('websites').append(website)
+          result.get('website').append(website)
     return result
 
   def __search__(self, runId, driver, result):
