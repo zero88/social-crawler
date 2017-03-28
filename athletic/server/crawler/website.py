@@ -89,7 +89,7 @@ class WebsiteCrawler(Crawler):
           errors.append({'url': url, 'message': e.message, 'key': key})
         continue
       if social == 'email':
-        data[social] = textUtils.search(content, 'href="mailto:' + regex, cutoff='href="mailto:')
+        data[social] = textUtils.search(content, '(href="mailto:)?' + regex, cutoff='(href="mailto:)?')
         continue
       data[social] = textUtils.search(content, 'href="' + regex, cutoff='href="')
     return data, errors

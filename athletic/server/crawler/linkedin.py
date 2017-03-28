@@ -10,7 +10,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import requests
 from lxml import etree
-from scrapy.crawler import CrawlerProcess
+from scrapy.crawler import CrawlerProcess, CrawlerRunner
+from scrapy.utils.log import configure_logging
+from twisted.internet import defer, reactor
 
 from spiderman import Spiderman
 
@@ -66,23 +68,36 @@ class LinkedinCrawler(Crawler):
       driver.quit()
     return result
 
+  @defer.inlineCallbacks
+  def crawl(self, runner, runId, records):
+    yield runner.crawl(Spiderman, runId=runId, pipeline=self, items=records, siteCfg=self.config)
+    reactor.stop()
+
   def access0(self, runId, records):
     logger.info('Start accessing on Linkedin')
-    # print CrawlerBrowser.get_useragent(CrawlerBrowser.CHROME)
-    # print CrawlerBrowser.get_driver(CrawlerBrowser.CHROME)
+    # runner = CrawlerRunner({
+    #     'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.FIREFOX),
+    #     'DOWNLOAD_DELAY': 1
+    # })
+    # self.crawl(runner, runId, records)
+    # # d = runner.crawl(Spiderman, runId=runId, pipeline=self, items=records, siteCfg=self.config)
+    # # d.addBoth(lambda _: reactor.stop())
+    # reactor.run()
+    configure_logging(install_root_handler=False)
     process = CrawlerProcess({
-        'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.FIREFOX),
+        'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.EDGE),
         'DOWNLOAD_DELAY': 1
     })
-    process.crawl(Spiderman, runId=runId, pipeline=self, items=records, siteCfg=self.config)
+    process.crawl(Spiderman, runId=runId, pipeline=self, items=records,
+                  browser=CrawlerBrowser.EDGE, siteCfg=self.config)
     process.start()
 
   def analyzeData(self, runId, item, response):
     data = self.__extractData__(response, self.config.get('profile').get('ref_xpath'))
     logger.debug(u'Method: {} - Key: {} - Data: {}'.format('access', item.get('key'), data))
     entity = self.__analyze_access__(data)
-    logger.info(fileUtils.writeTempFile(response.body, filePath=fileUtils.joinPaths('athletic', 'linkedin',
-                                                                                    'access', 'profile.html')))
+    logger.info(fileUtils.writeTempFile(response.body.decode('utf-8'), filePath=fileUtils.joinPaths('athletic', 'linkedin',
+                                                                                                    'access', 'profile.html')))
     self.updateEntity(runId, item, entity=entity, action=CrawlerAction.ACCESS)
 
   def notifyError(self, runId, item, response):
@@ -113,16 +128,17 @@ class LinkedinCrawler(Crawler):
   def __extractData__(self, response, xpath):
     try:
       logger.debug('Parsing XPath {}'.format(xpath))
-      # selector = Selector(response=response)
       refElement = response.selector.xpath(xpath).extract_first()
       print refElement
       if refElement is None:
         raise CrawlerError('Not found {}'.format(xpath))
       refData = json.loads(textUtils.encode(refElement), encoding='utf-8')
+      if refData.get('status') != 200:
+        raise CrawlerError('Value is forbidden ??')
       data = response.selector.xpath('//*[@id=$val]/text()', val=refData.get('body')).extract_first()
       return json.loads(textUtils.encode(data), encoding='utf-8')
     except Exception as e:
-      html = response.body
+      html = response.body.decode('utf-8')
       tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths('athletic', 'linkedin', 'access', 'error-profile.html'))
       raise CrawlerError('URL: {} - Error file: {}'.format(response.url, tmp), e, logging.ERROR)
     # try:

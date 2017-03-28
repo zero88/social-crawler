@@ -98,7 +98,8 @@ class DAO:
     limit = limit or self.dbCfg.get('limit_pagination')
     logger.debug('List in: {} - Query: {} - Fields: {} - Limit: {}'.format(collection, query, projection, limit))
     if limit == -1:
-      data = self.db[collection].find(query) if fields == [] else self.db[collection].find(query, projection=projection)
+      data = self.db[collection].find(query) if fields == [] else self.db[
+          collection].find(query, projection=projection)
     else:
       data = self.db[collection].find(query).limit(limit) if fields == [] else self.db[collection].find(query, projection=projection).limit(
           limit)

@@ -109,7 +109,7 @@ class Crawler(object):
         #         'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
         #     }
         # ]
-    }, limit=2)
+    }, fields=[], limit=500)
     runId = self.track(CrawlerAction.ACCESS)
     self.access0(runId, records)
 

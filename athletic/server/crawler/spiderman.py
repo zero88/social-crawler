@@ -37,7 +37,7 @@ class Spiderman(InitSpider):
       yield request
 
   def parse(self, response):
-    # print "Existing settings: %s" % self.settings.attributes.get('USER_AGENT')
+    print "Existing settings: %s" % self.settings.attributes.get('USER_AGENT')
     print '=======================PARSE ITEM=========================='
     item = response.meta.get('item')
     try:
@@ -48,6 +48,7 @@ class Spiderman(InitSpider):
       self.count += 1
     except (NoResultError, CrawlerError) as nre:
       self.errors.append({'key': item.get('key'), 'url': response.url, 'message': nre.message})
+      print item
       self.pipeline.notifyError(self.runId, item, response)
 
   def closed(self, reason):

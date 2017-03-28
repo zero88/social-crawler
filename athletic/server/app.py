@@ -41,10 +41,11 @@ class Athletic():
 
   def start(self):
     self.db.initialize()
-    self.__add_job(self.__access__, name='ACCESS', interval=10)
+    # self.__add_job(self.__access__, name='ACCESS', interval=30)
     # self.__add_job(self.__complete__, name='COMPLETE')
-    self.worker.start()
-    # self.__complete__()
+    # self.worker.start()
+    # self.__access__()
+    self.__complete__()
     # self.__export__()
 
   def __add_job(self, func, name='ACCESS', interval=1):
@@ -52,31 +53,28 @@ class Athletic():
     self.worker.add_job(func, id=jobId, trigger='interval', seconds=interval, max_instances=1)
 
   def __access__(self):
-    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'],
-                                             filterLocations=['us:0'], filterSpecs=['dance'])
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'], filterLocations=['us:0'])
     print queries[0:1]
     crawlers = CrawlerFactory.parse(self.dao, queries)
     CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers[0:1])
 
   def __complete__(self):
-    queries = self.crawlerQueryBuilder.build(['linkedin'], requestBy='zero')
-    specialists = ['yoga', 'pilates']
-    q = []
-    for query in queries:
-      for location in searchQuery.get('query').get('locations'):
-        for specialist in specialists:
-          query = dictUtils.deep_copy(searchQuery)
-          query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
-          queries.append(query)
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'])
+    print queries
+    # specialists = ['yoga', 'pilates']
+    # q = []
+    # for query in queries:
+    #   for location in searchQuery.get('query').get('locations'):
+    #     for specialist in specialists:
+    #       query = dictUtils.deep_copy(searchQuery)
+    #       query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
+    #       queries.append(query)
+    crawlers = CrawlerFactory.parse(self.dao, queries[0:1])
     threads = []
-    for query in queries:
-      t = threading.Thread(target=self.__runCrawler__, args=(query,))
-      threads.append(t)
-      t.start()
-
-  def __runCrawler__(self, query):
-    crawlers = CrawlerFactory.parse(self.dao, query)
-    CrawlerFactory.execute(CrawlerAction.COMPLETE, crawlers)
+    # for crawler in crawlers:
+    t = threading.Thread(target=CrawlerFactory.execute, args=(CrawlerAction.COMPLETE, crawlers))
+    threads.append(t)
+    t.start()
 
   def __export__(self):
     mapCol = {
