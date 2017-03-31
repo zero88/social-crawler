@@ -42,13 +42,13 @@ class Spiderman(InitSpider):
     item = response.meta.get('item')
     try:
       if response.status != 200:
-        self.pipeline.handleNoResult(NoResultError('No results in {}'.format(response.url), where=response.url))
+        # self.pipeline.handleNoResult(NoResultError('No results in {}'.format(response.url), where=response.url))
         raise NoResultError('No results {}::{}'.format(item.get('key'), response.url), where=response.url)
       self.pipeline.analyzeData(self.runId, item, response)
       self.count += 1
     except (NoResultError, CrawlerError) as nre:
-      self.errors.append({'key': item.get('key'), 'url': response.url, 'message': nre.message})
       print item
+      self.errors.append({'key': item.get('key'), 'url': response.url, 'message': nre.message})
       self.pipeline.notifyError(self.runId, item, response)
 
   def closed(self, reason):

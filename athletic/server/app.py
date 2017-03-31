@@ -44,6 +44,7 @@ class Athletic():
     # self.__add_job(self.__access__, name='ACCESS', interval=30)
     # self.__add_job(self.__complete__, name='COMPLETE')
     # self.worker.start()
+    # self.__search__()
     # self.__access__()
     self.__complete__()
     # self.__export__()
@@ -52,29 +53,25 @@ class Athletic():
     jobId = 'jobID::' + name
     self.worker.add_job(func, id=jobId, trigger='interval', seconds=interval, max_instances=1)
 
-  def __access__(self):
-    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'], filterLocations=['us:0'])
-    print queries[0:1]
+  def __search__(self):
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['instagram'])
     crawlers = CrawlerFactory.parse(self.dao, queries)
-    CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers[0:1])
+    CrawlerFactory.execute(CrawlerAction.SEARCH, crawlers)
+
+  def __access__(self):
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['instagram'])
+    crawlers = CrawlerFactory.parse(self.dao, queries)
+    CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers)
 
   def __complete__(self):
-    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin'])
-    print queries
-    # specialists = ['yoga', 'pilates']
-    # q = []
-    # for query in queries:
-    #   for location in searchQuery.get('query').get('locations'):
-    #     for specialist in specialists:
-    #       query = dictUtils.deep_copy(searchQuery)
-    #       query.get('query')['additional'] = {'location': {'$in': [location]}, 'specialist': {'$in': [specialist]}}
-    #       queries.append(query)
-    crawlers = CrawlerFactory.parse(self.dao, queries[0:1])
-    threads = []
+    queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin', 'instagram'])
+    crawlers = CrawlerFactory.parse(self.dao, queries)
+    CrawlerFactory.execute(CrawlerAction.COMPLETE, crawlers)
+    # threads = []
     # for crawler in crawlers:
-    t = threading.Thread(target=CrawlerFactory.execute, args=(CrawlerAction.COMPLETE, crawlers))
-    threads.append(t)
-    t.start()
+    # t = threading.Thread(target=CrawlerFactory.execute, args=(CrawlerAction.COMPLETE, crawlers))
+    # threads.append(t)
+    # t.start()
 
   def __export__(self):
     mapCol = {
@@ -84,8 +81,9 @@ class Athletic():
         'linkedin': {'index': 3, 'label': 'Linkedin account'},
         'avatar': {'index': 4, 'label': 'Avatar'},
         'pdf': {'index': 5, 'label': 'PDF profile'},
+        'socials.twitter':  {'index': 6, 'label': 'Social.Twitter'},
     }
-    handler = ExcelWriteHandler(mapCol=mapCol)
-    data = self.dao.list('teachers', query={'specialist': 'pilates'}, fields=list(mapCol))
+    handler = ExcelWriteHandler(file="teachers.xlsx", mapCol=mapCol)
+    data = self.dao.list('teachers', query={'specialist': 'pilates'}, fields=list(mapCol), limit=10)
     handler.writeSheet(handler.addWorkSheet('Pilates'), rows=data)
     logger.info('Output file: {}'.format(handler.file))

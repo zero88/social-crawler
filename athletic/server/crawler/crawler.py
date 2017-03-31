@@ -52,7 +52,7 @@ class Crawler(object):
   def __init__(self, dao, searchQuery, interval=30):
     self.dao = dao
     self.interval = interval
-    self.wait_page_load = 1
+    self.delay = 1
     self.searchQuery = searchQuery
     self.tempPrefix = fileUtils.joinPaths('athletic', searchQuery.get('method').get('type'))
     self.account = searchQuery.get('method').get('auth').get('user')
@@ -79,7 +79,7 @@ class Crawler(object):
 
   def connectURL(self, url):
     server = 'http://192.168.146.129:8050/render.html'
-    payload = {'url': url, 'timeout': self.interval, 'wait': self.wait_page_load, 'images': 0}
+    payload = {'url': url, 'timeout': self.interval, 'wait': self.delay, 'images': 0}
     logger.info('Conntect to server::{} - payload::{}'.format(server, payload))
     response = requests.get(server, params=payload)
     code = response.status_code
@@ -98,17 +98,25 @@ class Crawler(object):
   def access(self):
     ''' Collect intensively detail profile '''
     records = self.dao.list('teachers', {
-        'metadata.method': self.searchQuery.get('method').get('type'),
-        'location': {'$in': self.searchQuery.get('query').get('locations')},
-        'specialist': {'$in': [k.get('specialist') for k in self.searchQuery.get('query').get('keywords')]},
-        'metadata.action': CrawlerAction.SEARCH
-        # '$or': [
-        #     {'metadata.action': CrawlerAction.SEARCH},
-        #     {
-        #         'metadata.action': CrawlerAction.ACCESS,
-        #         'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
-        #     }
-        # ]
+        '$and': [
+            {'metadata.method': self.searchQuery.get('method').get('type')},
+            {'specialist': {'$in': [k.get('specialist') for k in self.searchQuery.get('query').get('keywords')]}},
+            {
+                '$or': [
+                    {'location': {'$in': self.searchQuery.get('query').get('locations')}},
+                    {'location': {'$exists': False}},
+                ]
+            },
+            {
+                '$or': [
+                    {'metadata.action': CrawlerAction.SEARCH},
+                    {
+                        'metadata.action': CrawlerAction.ACCESS,
+                        'metadata.state': {'$nin': [CrawlerState.ERROR, CrawlerState.OK], '$exists': True}
+                    }
+                ]
+            }
+        ]
     }, fields=[], limit=500)
     runId = self.track(CrawlerAction.ACCESS)
     self.access0(runId, records)
@@ -157,10 +165,13 @@ class Crawler(object):
     return runId
 
   def finish(self, runId, result):
-    logging.info('Finish track runId: {}'.format(runId))
+    logging.info('Finish RunId: {} - Total: {} - Count: {} - Errors: {}'.format(runId,
+                                                                                result.get('total'),
+                                                                                result.get('count'),
+                                                                                len(result.get('errors'))))
     self.dao.update('crawler_transactions', {'runId': runId}, data=result)
 
-  def processEntity(self, runId, entity, action):
+  def processEntity(self, runId, entity, action=CrawlerAction.SEARCH):
     if textUtils.isEmpty(entity.get('fullName')):
       entity['fullName'] = entity.get('firstName', '') + ' ' + entity.get('lastName', '')
     if 'metadata' not in entity:
@@ -212,3 +223,12 @@ class Crawler(object):
       if textUtils.match(url, regex):
         return {key: url}
     return {'website': url}
+
+  def findSocials(self, textData):
+    socials = {}
+    for key, regex in self.socialRegex.iteritems():
+      regex = regex if key != 'phone' else (regex.get('prefix') + regex.get('regex'))
+      value = textUtils.search(textData, regex)
+      if value:
+        socials[key] = value
+    return socials

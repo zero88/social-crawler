@@ -27,7 +27,7 @@ class LinkedinCrawler(Crawler):
 
   def __init__(self, dao, searchQuery):
     super(LinkedinCrawler, self).__init__(dao, searchQuery)
-    self.wait_page_load = 5
+    self.delay = 5
     self.config = {
         'url': 'https://www.linkedin.com',
         'login': {
@@ -114,7 +114,7 @@ class LinkedinCrawler(Crawler):
         userfield.send_keys(self.account)
         passfield.send_keys(self.password)
         submit_form.submit()
-      driver.implicitly_wait(self.wait_page_load)
+      driver.implicitly_wait(self.delay)
     except WebDriverException as e:
       raise CrawlerError('Cannot login in linkedin', e, logging.ERROR)
 
@@ -258,7 +258,7 @@ class LinkedinCrawler(Crawler):
       if search:
         entity['address'] = search.get('address')
         entity['pdf'] = self.__analyze_pdf__(people, search.get('action')) or ''
-      self.processEntity(runId, entity, CrawlerAction.SEARCH)
+      self.processEntity(runId, entity)
       countPerPage += 1
     return countPerPage
 
