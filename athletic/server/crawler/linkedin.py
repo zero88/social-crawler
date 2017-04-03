@@ -85,11 +85,11 @@ class LinkedinCrawler(Crawler):
     # reactor.run()
     configure_logging(install_root_handler=False)
     process = CrawlerProcess({
-        'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.EDGE),
+        'USER_AGENT': CrawlerBrowser.get_useragent(CrawlerBrowser.FIREFOX),
         'DOWNLOAD_DELAY': 1
     })
     process.crawl(Spiderman, runId=runId, pipeline=self, items=records,
-                  browser=CrawlerBrowser.EDGE, siteCfg=self.config)
+                  browser=CrawlerBrowser.FIREFOX, siteCfg=self.config)
     process.start()
 
   def analyzeData(self, runId, item, response):
@@ -141,16 +141,6 @@ class LinkedinCrawler(Crawler):
       html = response.body.decode('utf-8')
       tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths('athletic', 'linkedin', 'access', 'error-profile.html'))
       raise CrawlerError('URL: {} - Error file: {}'.format(response.url, tmp), e, logging.ERROR)
-    # try:
-    #   logger.debug('Parsing XPath {}'.format(xpath))
-    #   refElement = driver.find_element_by_xpath(xpath)
-    #   refData = json.loads(refElement.get_attribute('innerHTML'), encoding='utf-8')
-    #   dataElement = driver.find_element_by_id(refData.get('body'))
-    #   return json.loads(dataElement.get_attribute('innerHTML'), encoding='utf-8')
-    # except (WebDriverException, Exception) as e:
-    #   html = driver.page_source
-    #   tmp = fileUtils.writeTempFile(html, fileUtils.joinPaths(self.tempPrefix, 'linkedin.html'))
-    #   raise CrawlerError('URL: {} - Error file: {}'.format(driver.current_url, tmp), e, logging.ERROR)
 
   def __analyze_access__(self, data):
     result = {
@@ -192,13 +182,13 @@ class LinkedinCrawler(Crawler):
           'keyword': keyword,
           'location': location,
           'count': 0,
-          'start_page': self.counter.get('start_page'),
-          'current_page': self.counter.get('start_page')
+          'start_page': self.counter.get('search').get('start_page'),
+          'current_page': self.counter.get('search').get('start_page')
       }
       while True:
         pageIndex = stop.get('current_page')
-        gap = self.counter.get('expected_on_keyword_location') - stop.get('count')
-        limited = gap if self.counter.get('limited') is True else -1
+        gap = self.counter.get('search').get('expected_on_keyword_location') - stop.get('count')
+        limited = gap if self.counter.get('search').get('limited') is True else -1
         try:
           stop['count'] += self.__searchPerPage__(runId, driver, specialist, location,
                                                   keyword, pageIndex, limited)

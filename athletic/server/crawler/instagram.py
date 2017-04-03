@@ -8,7 +8,7 @@ from requests.exceptions import RequestException
 
 from ..exception import CrawlerError, NoResultError
 from ..utils import fileUtils, textUtils
-from .crawler import Crawler
+from .crawler import Crawler, CrawlerBrowser
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +17,12 @@ class InstagramCrawler(Crawler):
 
   def __init__(self, dao, searchQuery):
     super(InstagramCrawler, self).__init__(dao, searchQuery)
-    self.delay = 5
+    self.delay = 0.05
     self.config = {
         'url': 'https://www.instagram.com',
         'search': {
             'url': 'https://www.instagram.com/web/search/topsearch/?context=user&query={}&count={}',
-            'count': 2
+            'count': 5000
         },
         'profile': {
             'url': 'https://www.instagram.com/{}/?__a=1'
@@ -41,15 +41,15 @@ class InstagramCrawler(Crawler):
           t, c = self.__search0__(runId=runId, url=url, specialist=searchKey.get('specialist'), keyword=keyword)
           total += t
           count += c
+          time.sleep(self.delay)
         except CrawlerError as e:
-          errors.append({'url': url, 'message': nre.message})
+          errors.append({'url': url, 'message': e.message})
     return {'total': total, 'count': count, 'errors': errors}
 
   def __search0__(self, runId, url, specialist, keyword):
-    time.sleep(self.delay)
     try:
       total, count = 0, 0
-      response = requests.get(url)
+      response = requests.get(url, headers={'user-agent': CrawlerBrowser.get_useragent(CrawlerBrowser.CHROME)})
       data = response.json()
       logger.debug(fileUtils.writeTempFile(textUtils.decode(json.dumps(data)), fileUtils.joinPaths(
           'athletic', 'instagram', 'search', 'search_' + keyword + '.json')))
@@ -72,7 +72,7 @@ class InstagramCrawler(Crawler):
         self.processEntity(runId, entity)
         count += 1
       return total, count
-    except RequestException as e:
+    except (RequestException, ValueError) as e:
       raise CrawlerError('Instagram URL error', ex=e, where=url)
 
   def access0(self, runId, records):
@@ -85,13 +85,14 @@ class InstagramCrawler(Crawler):
       try:
         self.updateEntity(runId=runId, record=record, entity=self.__access0__(url, record.get('key')))
         count += 1
+        time.sleep(self.delay)
       except (NoResultError, CrawlerError) as e:
         errors.append({'url': url, 'message': e.message})
     self.finish(runId, {'total': total, 'count': count, 'errors': errors})
 
   def __access0__(self, url, key):
     try:
-      response = requests.get(url)
+      response = requests.get(url, headers={'user-agent': CrawlerBrowser.get_useragent(CrawlerBrowser.FIREFOX)})
       data = response.json()
       logger.debug(fileUtils.writeTempFile(textUtils.decode(json.dumps(data)), fileUtils.joinPaths(
           'athletic', 'instagram', 'access', 'profile_' + key + '.json')))
@@ -106,6 +107,6 @@ class InstagramCrawler(Crawler):
           socials.get('facebook').append(facebook)
         else:
           socials['facebook'] = [facebook]
-      return {'website': website, 'socials': socials}
-    except RequestException as e:
+      return {'website': [website] if website else [], 'socials': socials}
+    except (RequestException, ValueError) as e:
       raise NoResultError('Instagram URL error', ex=e, where=url)

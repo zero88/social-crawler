@@ -9,6 +9,7 @@ from bson import Binary, Code, json_util
 from bson.dbref import DBRef
 from bson.objectid import ObjectId
 from pymongo import ASCENDING, DESCENDING, TEXT, IndexModel, MongoClient
+from pymongo.operations import UpdateMany, UpdateOne
 
 from exception import BaseError, DatabaseError, ValidationError
 from utils import dictUtils, fileUtils, textUtils
@@ -185,6 +186,16 @@ class AthleticDB():
 
   def __migrate__(self):
     pass
+    # requests = []
+    # for document in self.dao.db['teachers'].find({'metadata.method': 'instagram'}, modifiers={"$snapshot": True}):
+    #   update = UpdateOne(filter={'_id': document.get('_id')},
+    #                      update={'$set': {'website': [document.get('website')]}})
+    #   requests.append(update)
+    #   if len(requests) == 1000:
+    #     self.dao.db['teachers'].bulk_write(requests)
+    #     requests = []
+    # if len(requests) > 0:
+    #   self.dao.db['teachers'].bulk_write(requests)
 
   def __recover__(self):
     pass

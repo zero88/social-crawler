@@ -29,7 +29,7 @@ class CrawlerBrowser(object):
 
   @staticmethod
   def get_driver(browser):
-    execPath = 'C:/Users/sontt/Projects/work/startl.us/athletic-teacher/athletic/exec/'
+    execPath = 'C:/Users/tts/Projects/private/athletic-teacher/athletic/exec'
     if browser == CrawlerBrowser.CHROME:
       return webdriver.Chrome(executable_path=fileUtils.joinPaths(execPath, 'chromedriver.exe'))
     if browser == CrawlerBrowser.IE:
@@ -49,14 +49,15 @@ class CrawlerState(object):
 
 class Crawler(object):
 
-  def __init__(self, dao, searchQuery, interval=30):
+  def __init__(self, dao, searchQuery, interval=10):
     self.dao = dao
     self.interval = interval
     self.delay = 1
     self.searchQuery = searchQuery
     self.tempPrefix = fileUtils.joinPaths('athletic', searchQuery.get('method').get('type'))
-    self.account = searchQuery.get('method').get('auth').get('user')
-    self.password = searchQuery.get('method').get('auth').get('password')
+    self.account = searchQuery.get('method').get('auth').get('user') if searchQuery.get('method').get('auth') else None
+    self.password = searchQuery.get('method').get('auth').get(
+        'password') if searchQuery.get('method').get('auth') else None
     self.locations = searchQuery.get('query').get('locations')
     self.keywords = searchQuery.get('query').get('keywords')
     self.counter = dictUtils.deep_copy(searchQuery.get('counter'))
@@ -78,7 +79,7 @@ class Crawler(object):
     }
 
   def connectURL(self, url):
-    server = 'http://192.168.146.129:8050/render.html'
+    server = 'http://192.168.182.128:8050/render.html'
     payload = {'url': url, 'timeout': self.interval, 'wait': self.delay, 'images': 0}
     logger.info('Conntect to server::{} - payload::{}'.format(server, payload))
     response = requests.get(server, params=payload)
@@ -117,7 +118,7 @@ class Crawler(object):
                 ]
             }
         ]
-    }, fields=[], limit=500)
+    }, fields=[], limit=self.counter.get('access').get('limited'))
     runId = self.track(CrawlerAction.ACCESS)
     self.access0(runId, records)
 
@@ -125,8 +126,9 @@ class Crawler(object):
     ''' Collect profile from external resource(facebook/google) '''
     query = {
         'metadata.method': self.searchQuery.get('method').get('type'),
-        'website': {'$exists': True, '$ne': []},
+        'website': {'$exists': True, '$ne': [], '$ne': None},
         'metadata.action': CrawlerAction.ACCESS,
+        'specialist': {'$in': [k.get('specialist') for k in self.searchQuery.get('query').get('keywords')]},
         # '$or': [
         #     {},
         #     {
@@ -160,7 +162,7 @@ class Crawler(object):
         'total': 0,
         'query': query
     }
-    logging.info('Start track runId: {}'.format(runId))
+    logging.info('Start RunId: {}'.format(runId))
     self.dao.insertOne('crawler_transactions', trackRecord)
     return runId
 
