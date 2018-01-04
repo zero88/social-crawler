@@ -1,7 +1,9 @@
+key
 fullName
 title
 address
 linkedin
+instagram
 avatar
 pdf
 email

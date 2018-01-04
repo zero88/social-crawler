@@ -44,34 +44,34 @@ class ZSCApp():
         # self.__add_job(self.__access__, name='ACCESS', interval=30)
         # self.__add_job(self.__complete__, name='COMPLETE')
         # self.worker.start()
-        # self.__search__()
-        # self.__access__()
-        self.__complete__()
+        # self.__search__(filterMethods=['linkedin'])
+        # self.__access__(filterMethods=['linkedin'])
+        self.__complete__(filterMethods=['linkedin', 'instagram'])
         # self.__export__()
 
     def __add_job(self, func, name='ACCESS', interval=1):
         jobId = 'jobID::' + name
         self.worker.add_job(func, id=jobId, trigger='interval', seconds=interval, max_instances=1)
 
-    def __search__(self):
-        queries = self.crawlerQueryBuilder.build('zero', filterMethods=['instagram'])
+    def __search__(self, filterMethods=[], filterSpecs=[]):
+        queries = self.crawlerQueryBuilder.build('zero', filterMethods=filterMethods, filterSpecs=filterSpecs)
         crawlers = CrawlerFactory.parse(self.dao, queries)
         CrawlerFactory.execute(CrawlerAction.SEARCH, crawlers)
 
-    def __access__(self):
-        queries = self.crawlerQueryBuilder.build('zero', filterMethods=['instagram'])
+    def __access__(self, filterMethods=[], filterSpecs=[]):
+        queries = self.crawlerQueryBuilder.build('zero', filterMethods=filterMethods, filterSpecs=filterSpecs)
         crawlers = CrawlerFactory.parse(self.dao, queries)
         CrawlerFactory.execute(CrawlerAction.ACCESS, crawlers)
 
-    def __complete__(self):
-        queries = self.crawlerQueryBuilder.build('zero', filterMethods=['linkedin', 'instagram'])
+    def __complete__(self, filterMethods=[], filterSpecs=[]):
+        queries = self.crawlerQueryBuilder.build('zero', filterMethods=filterMethods, filterSpecs=filterSpecs)
         crawlers = CrawlerFactory.parse(self.dao, queries)
         CrawlerFactory.execute(CrawlerAction.COMPLETE, crawlers)
-        # threads = []
-        # for crawler in crawlers:
-        # t = threading.Thread(target=CrawlerFactory.execute, args=(CrawlerAction.COMPLETE, crawlers))
-        # threads.append(t)
-        # t.start()
+        threads = []
+        for crawler in crawlers:
+            t = threading.Thread(target=CrawlerFactory.execute, args=(CrawlerAction.COMPLETE, [crawler]))
+            threads.append(t)
+            t.start()
 
     def __export__(self):
         mapCol = {

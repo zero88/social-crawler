@@ -9,6 +9,7 @@ from bson import Binary, Code, json_util
 from bson.dbref import DBRef
 from bson.objectid import ObjectId
 from pymongo import ASCENDING, DESCENDING, TEXT, IndexModel, MongoClient
+from pymongo.operations import UpdateMany, UpdateOne
 
 from exception import BaseError, DatabaseError, ValidationError
 from utils import dictUtils, fileUtils, textUtils
