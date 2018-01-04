@@ -5,7 +5,7 @@ import logging
 import urllib
 
 import requests
-from crawler import Crawler
+from crawler import ZSCrawler
 
 from ..exception import CrawlerError, NoResultError
 from ..utils import fileUtils, textUtils
@@ -13,19 +13,16 @@ from ..utils import fileUtils, textUtils
 logger = logging.getLogger(__name__)
 
 
-class FacebookCrawler(Crawler):
+class FacebookCrawler(ZSCrawler):
 
-  def __init__(self, dao, searchQuery):
-    super(FacebookCrawler, self).__init__(dao, searchQuery)
+    def __init__(self, dao, searchQuery):
+        super(FacebookCrawler, self).__init__(dao, searchQuery)
 
-  def search0(self, runId):
-    print 'Fb Search'
-    pass
+    def search0(self, runId):
+        print('Fb Search')
 
-  def access0(self, runId):
-    print 'Fb Access'
-    pass
+    def access0(self, runId):
+        print('Fb Access')
 
-  def complete0(self, runId):
-    print 'Fb Complete'
-    pass
+    def complete0(self, runId):
+        print('Fb Complete')

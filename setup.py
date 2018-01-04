@@ -5,27 +5,27 @@ from setuptools import find_packages, setup
 
 
 def package_files(directory):
-  paths = []
-  for (path, directories, filenames) in os.walk(directory):
-    for filename in filenames:
-      paths.append(os.path.join('..', path, filename))
-  return paths
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join('..', path, filename))
+    return paths
 
-config = package_files('athletic/config')
-client = package_files('athletic/client/dist')
+config = package_files('crawler/config')
+client = package_files('crawler/client/dist')
 package_data = config + client + ['logs/dummy.txt']
 
 with open("README.md", 'r') as f:
-  long_description = f.read()
+    long_description = f.read()
 
 setup(
-    name='athletic',
+    name='Social Crawler',
     version='1.0.0',
     author='sontt',
     author_email='sontt246@gmail.com',
     long_description=long_description,
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    package_data={'athletic': package_data},
+    package_data={'crawler': package_data},
     install_requires=[
         'apscheduler==3.3.1', 'pyyaml==3.12', 'pypiwin32', 'pyjwt==1.4.2', 'pymongo==3.4.0', 'requests==2.13.0',
         'flask==0.12', 'flask-restful==0.2.12', 'flask-cors==3.0.2', 'tornado==4.4.2',
@@ -37,7 +37,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'athletic=athletic:main',
+            'zsc=crawler:main',
         ],
     },
     zip_safe=False

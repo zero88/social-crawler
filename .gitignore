@@ -1,7 +1,7 @@
 *.pyc
 **/*.key.json
-**/logs/*.log
-**/logs/*.log.*
-debug.log
-**/dist/
-**/node_modules/
+logs/
+dist/
+node_modules/
+data/
+bin/
